@@ -1,0 +1,175 @@
+package com.ibm.integration.qmdemo;
+
+import javax.jms.Connection;
+import javax.jms.Destination;
+import javax.jms.JMSException;
+import javax.jms.Message;
+import javax.jms.MessageProducer;
+import javax.jms.Session;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.ibm.mq.jms.MQConnectionFactory;
+import com.ibm.msg.client.wmq.WMQConstants;
+
+public class Producer {
+
+	private static final Logger LOGGER = LoggerFactory.getLogger(Producer.class);
+	private static final int LOG_FREQUENCY = 100;
+
+        public static void main(String[] args) {
+        	Connection connection = null;
+        	Session session = null;
+        	MessageProducer producer = null;
+       
+        	try {
+        		// Load and validate configuration
+        		String mqHost = getEnvOrDefault("MQ_HOST", "qmdemo-ibm-mq");
+        		int mqPort = parseIntWithValidation("MQ_PORT", getEnvOrDefault("MQ_PORT", "1414"), 1, 65535);
+        		String mqQueueManager = getEnvOrDefault("MQ_QUEUE_MANAGER", "QMDEMO");
+        		String mqChannel = getEnvOrDefault("MQ_CHANNEL", "DEV.APP.SVRCONN.0TLS");
+        		String mqAppName = getEnvOrDefault("MQ_APP_NAME", "MY-PRODUCER");
+        		String mqQueueName = getEnvOrDefault("MQ_QUEUE_NAME", "DEV.QUEUE.1");
+        		String mqUsername = getEnvOrDefault("MQ_APP_USERNAME", "app");
+        		String mqCipherSuite = System.getenv("MQ_SSL_CIPHER_SUITE");
+        		String mqMessage = getEnvOrDefault("MQ_MESSAGE", "Test some data here");
+        		int messageCount = parseIntWithValidation("MQ_MESSAGE_COUNT", getEnvOrDefault("MQ_MESSAGE_COUNT", "4000"), 1, Integer.MAX_VALUE);
+        		long sendSleepMillis = parseLongWithValidation("MQ_SEND_SLEEP_MILLIS", getEnvOrDefault("MQ_SEND_SLEEP_MILLIS", "3000"), 0, Long.MAX_VALUE);
+        		String mqAppPassword = System.getenv("MQ_APP_PASSWORD");
+       
+        		LOGGER.debug("Resolved MQ environment configuration for producer startup");
+       
+        		if (mqAppPassword == null || mqAppPassword.isEmpty()) {
+        			throw new IllegalArgumentException("No environment variable supplied for password, supply env var MQ_APP_PASSWORD with a password.");
+        		}
+
+                        // Configure MQ connection factory
+                        MQConnectionFactory connectionFactory = new MQConnectionFactory();
+                     
+                        LOGGER.debug("Configuring MQ connection factory");
+                        connectionFactory.setHostName(mqHost);
+                        connectionFactory.setPort(mqPort);
+                        if (mqCipherSuite != null && !mqCipherSuite.isEmpty()) {
+                        	connectionFactory.setSSLCipherSuite(mqCipherSuite);
+                        	LOGGER.debug("TLS cipher suite configured for MQ connection");
+                        }
+                        connectionFactory.setQueueManager(mqQueueManager);
+                        connectionFactory.setChannel(mqChannel);
+                        connectionFactory.setTransportType(WMQConstants.WMQ_CM_CLIENT);
+                        connectionFactory.setAppName(mqAppName);
+                        connectionFactory.setClientReconnectOptions(WMQConstants.WMQ_CLIENT_RECONNECT);
+                     
+                        LOGGER.info(
+                        		"MQ connection configuration prepared for host={}, port={}, queueManager={}, channel={}, queue={}, appName={}, tlsCipherSuite={}",
+                        		mqHost,
+                        		Integer.valueOf(mqPort),
+                        		mqQueueManager,
+                        		mqChannel,
+                        		mqQueueName,
+                        		mqAppName,
+                        		mqCipherSuite != null && !mqCipherSuite.isEmpty() ? mqCipherSuite : "<not set>");
+                        LOGGER.debug("Producer send loop configured with messageCount={} and sendSleepMillis={} ms",
+                        		Integer.valueOf(messageCount),
+                        		Long.valueOf(sendSleepMillis));
+                     
+                        LOGGER.info("Starting producer connection");
+                        connection = connectionFactory.createConnection(mqUsername, mqAppPassword);
+                        LOGGER.debug("MQ connection created successfully");
+                     
+                        LOGGER.debug("Creating JMS session");
+                        session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
+                        Destination sendTo = session.createQueue(mqQueueName);
+                        producer = session.createProducer(sendTo);
+                        LOGGER.debug("JMS producer created for queue {}", mqQueueName);
+                     
+                        Message message = session.createTextMessage(mqMessage);
+                        LOGGER.debug("Prepared JMS text message with payload length={}", Integer.valueOf(mqMessage.length()));
+                     
+                        LOGGER.info("Starting message send loop");
+                     
+                        for (int i = 0; i < messageCount; i++) {
+                        	LOGGER.debug("Sending message iteration {}", Integer.valueOf(i + 1));
+                        	producer.send(message);
+                        	if ((i + 1) % LOG_FREQUENCY == 0 || i + 1 == messageCount) {
+                        		LOGGER.info("Sent {} messages", Integer.valueOf(i + 1));
+                        	}
+                        	Thread.sleep(sendSleepMillis);
+                        }
+                     
+                        LOGGER.info("Producer finished successfully");
+                     
+                       } catch (JMSException e) {
+                        LOGGER.error("JMS error occurred in producer", e);
+                        for (Throwable cause = e.getCause(); cause != null; cause = cause.getCause()) {
+                        	LOGGER.error("Caused by", cause);
+                        }
+                       } catch (NumberFormatException e) {
+                        LOGGER.error("Invalid numeric configuration value", e);
+                       } catch (IllegalArgumentException e) {
+                        LOGGER.error("Invalid configuration", e);
+                       } catch (InterruptedException e) {
+                        LOGGER.warn("Producer interrupted", e);
+                        Thread.currentThread().interrupt();
+                       } catch (Exception e) {
+                        LOGGER.error("Unexpected error in producer", e);
+                        for (Throwable cause = e.getCause(); cause != null; cause = cause.getCause()) {
+                        	LOGGER.error("Caused by", cause);
+                        }
+                       } finally {
+                        // Ensure resources are properly closed
+                        closeQuietly(producer, "MessageProducer");
+                        closeQuietly(session, "Session");
+                        closeQuietly(connection, "Connection");
+                       }
+                      }
+
+        private static String getEnvOrDefault(String name, String defaultValue) {
+        	String value = System.getenv(name);
+        	if (value == null || value.isEmpty()) {
+        		return defaultValue;
+        	}
+        	return value;
+        }
+       
+        private static int parseIntWithValidation(String paramName, String value, int min, int max) {
+        	try {
+        		int parsed = Integer.parseInt(value);
+        		if (parsed < min || parsed > max) {
+        			throw new IllegalArgumentException(
+        				String.format("Parameter %s value %d is out of valid range [%d, %d]", paramName, parsed, min, max));
+        		}
+        		return parsed;
+        	} catch (NumberFormatException e) {
+        		throw new IllegalArgumentException(
+        			String.format("Parameter %s has invalid integer value: %s", paramName, value), e);
+        	}
+        }
+       
+        private static long parseLongWithValidation(String paramName, String value, long min, long max) {
+        	try {
+        		long parsed = Long.parseLong(value);
+        		if (parsed < min || parsed > max) {
+        			throw new IllegalArgumentException(
+        				String.format("Parameter %s value %d is out of valid range [%d, %d]", paramName, parsed, min, max));
+        		}
+        		return parsed;
+        	} catch (NumberFormatException e) {
+        		throw new IllegalArgumentException(
+        			String.format("Parameter %s has invalid long value: %s", paramName, value), e);
+        	}
+        }
+       
+        private static void closeQuietly(AutoCloseable resource, String resourceName) {
+        	if (resource != null) {
+        		try {
+        			resource.close();
+        			LOGGER.debug("{} closed successfully", resourceName);
+        		} catch (Exception e) {
+        			LOGGER.warn("Failed to close {}", resourceName, e);
+        		}
+        	}
+        }
+       }
+       
+       // Made with Bob

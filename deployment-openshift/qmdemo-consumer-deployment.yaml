@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mq-consumer
+  labels:
+    app: mq-consumer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mq-consumer
+  template:
+    metadata:
+      labels:
+        app: mq-consumer
+    spec:
+      containers:
+        - name: mq-consumer
+          image: image-registry.openshift-image-registry.svc:5000/$(NAMESPACE)/mq-consumer:latest
+          imagePullPolicy: Always
+          env:
+            - name: MQ_HOST
+              value: qmdemo-ibm-mq
+            - name: MQ_PORT
+              value: "1414"
+            - name: MQ_QUEUE_MANAGER
+              value: QMDEMO
+            - name: MQ_CHANNEL
+              value: DEV.APP.SVRCONN.0TLS
+            - name: MQ_QUEUE_NAME
+              value: DEV.QUEUE.1
+            - name: MQ_APP_NAME
+              value: MY-CONSUMER
+            - name: MQ_APP_USERNAME
+              value: app
+            - name: MQ_RECEIVE_SLEEP_MILLIS
+              value: "500"
+            - name: MQ_APP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mq-client-auth
+                  key: password
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
+# Made with Bob
