@@ -208,15 +208,35 @@ The workflow (`.github/workflows/build-and-push.yml`) automatically:
 - Supports manual workflow dispatch
 - Creates versioned tags on releases
 
-**Triggers:**
-- Push to `main` or `master` branch
-- Pull requests
-- Manual workflow dispatch
-- Release publication
+**Automatic Triggers:**
+- **Push to `main` or `master` branch** - When changes are pushed to these branches affecting:
+  - `jmsproducer/` directory
+  - `jmsconsumer/` directory
+  - The workflow file itself
+- **Pull Requests** - Builds are validated but images are not pushed
+- **Release Publication** - Creates versioned image tags
 
-**Permissions Required:**
-- The workflow uses `GITHUB_TOKEN` automatically provided by GitHub Actions
-- No additional secrets needed for GHCR publishing
+**Manual Trigger:**
+- Go to GitHub repository → **Actions** tab
+- Select **Build and Push Container Images** workflow
+- Click **Run workflow** button
+- Choose branch and click **Run workflow**
+
+**First-Time Setup:**
+1. Commit and push the workflow file to your repository:
+   ```bash
+   git add .github/workflows/build-and-push.yml
+   git commit -m "Add GitHub Actions workflow for container builds"
+   git push origin main
+   ```
+2. The workflow runs automatically on this push
+3. Check the **Actions** tab on GitHub to monitor build progress
+4. Once complete, images are available at GHCR
+
+**Permissions:**
+- Uses `GITHUB_TOKEN` automatically provided by GitHub Actions
+- No additional secrets or configuration needed
+- Images are published to your repository's package registry
 
 ## OpenShift Deployment
 
