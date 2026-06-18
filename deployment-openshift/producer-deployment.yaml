@@ -53,6 +53,30 @@ spec:
                 secretKeyRef:
                   name: mq-client-auth
                   key: password
+            # Uncomment below for TLS/mTLS configuration
+            # - name: MQ_SSL_CIPHER_SUITE
+            #   value: "TLS_RSA_WITH_AES_128_CBC_SHA256"
+            # - name: MQ_SSL_KEYSTORE_PATH
+            #   value: "/etc/ssl/certs/client-keystore.jks"
+            # - name: MQ_SSL_KEYSTORE_PASSWORD
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: mq-tls-certs
+            #       key: keystore-password
+            # - name: MQ_SSL_TRUSTSTORE_PATH
+            #   value: "/etc/ssl/certs/truststore.jks"
+            # - name: MQ_SSL_TRUSTSTORE_PASSWORD
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: mq-tls-certs
+            #       key: truststore-password
+            # - name: MQ_SSL_PEER_NAME_ENABLED
+            #   value: "true"
+          # Uncomment below to mount TLS certificates from a secret
+          # volumeMounts:
+          #   - name: tls-certs
+          #     mountPath: /etc/ssl/certs
+          #     readOnly: true
           resources:
             requests:
               cpu: 100m
@@ -68,6 +92,16 @@ spec:
                 - ALL
             seccompProfile:
               type: RuntimeDefault
+      # Uncomment below to mount TLS certificates from a secret
+      # volumes:
+      #   - name: tls-certs
+      #     secret:
+      #       secretName: mq-tls-certs
+      #       items:
+      #         - key: client-keystore.jks
+      #           path: client-keystore.jks
+      #         - key: truststore.jks
+      #           path: truststore.jks
       restartPolicy: Always
 
 # Made with Bob

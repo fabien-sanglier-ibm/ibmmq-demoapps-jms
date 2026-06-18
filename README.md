@@ -66,8 +66,18 @@ Both applications are configured via environment variables:
 | `MQ_CHANNEL` | Server connection channel | `DEV.APP.SVRCONN.0TLS` |
 | `MQ_QUEUE_NAME` | Queue name | `DEV.QUEUE.1` |
 | `MQ_APP_USERNAME` | Application username | `app` |
-| `MQ_APP_PASSWORD` | Application password (required) | - |
-| `MQ_SSL_CIPHER_SUITE` | TLS cipher suite (optional) | - |
+| `MQ_APP_PASSWORD` | Application password (required unless using mTLS) | - |
+
+### TLS/mTLS Configuration
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `MQ_SSL_CIPHER_SUITE` | TLS cipher suite (e.g., `TLS_RSA_WITH_AES_128_CBC_SHA256`) | - |
+| `MQ_SSL_KEYSTORE_PATH` | Path to client keystore (JKS/PKCS12) for mTLS | - |
+| `MQ_SSL_KEYSTORE_PASSWORD` | Password for client keystore | - |
+| `MQ_SSL_TRUSTSTORE_PATH` | Path to truststore for server certificate validation | - |
+| `MQ_SSL_TRUSTSTORE_PASSWORD` | Password for truststore | - |
+| `MQ_SSL_PEER_NAME_ENABLED` | Enable SSL peer name verification (true/false) | `true` |
 
 ### Producer-Specific Configuration
 
@@ -315,11 +325,84 @@ Applications use SLF4J with simple logger:
 
 ## Security Considerations
 
-- Passwords must be provided via `MQ_APP_PASSWORD` environment variable
-- TLS/SSL support via `MQ_SSL_CIPHER_SUITE` configuration
+### Authentication
+Both applications support flexible authentication with three modes:
+
+1. **Username/Password Authentication Only**
+   - Requires `MQ_APP_USERNAME` and `MQ_APP_PASSWORD` environment variables
+   - Used when mTLS is not configured
+   - No default passwords - applications fail to start without credentials
+   - Can be combined with TLS for encrypted transport
+
+2. **mTLS Client Certificate Authentication Only**
+   - Client certificate in keystore provides authentication
+   - Password (`MQ_APP_PASSWORD`) is **not required** when mTLS is configured
+   - Requires both `MQ_SSL_CIPHER_SUITE` and `MQ_SSL_KEYSTORE_PATH` to be set
+   - Most secure option - certificate-based authentication
+
+3. **Combined mTLS + Username/Password**
+   - Both client certificate and username/password authentication
+   - Provides dual authentication factors
+   - Useful when MQ is configured to require both methods
+
+### TLS/SSL Support
+Both applications support multiple TLS configurations:
+
+**1. Username/Password Only (No TLS):**
+```bash
+export MQ_APP_USERNAME=app
+export MQ_APP_PASSWORD=your-password
+# No encryption - not recommended for production
+```
+
+**2. TLS with Username/Password (Server Authentication):**
+```bash
+export MQ_SSL_CIPHER_SUITE=TLS_RSA_WITH_AES_128_CBC_SHA256
+export MQ_SSL_TRUSTSTORE_PATH=/path/to/truststore.jks
+export MQ_SSL_TRUSTSTORE_PASSWORD=truststore-password
+export MQ_APP_USERNAME=app
+export MQ_APP_PASSWORD=your-password
+# Encrypted transport + password authentication
+```
+
+**3. mTLS Only (Client Certificate Authentication):**
+```bash
+export MQ_SSL_CIPHER_SUITE=TLS_RSA_WITH_AES_128_CBC_SHA256
+export MQ_SSL_KEYSTORE_PATH=/path/to/client-keystore.jks
+export MQ_SSL_KEYSTORE_PASSWORD=keystore-password
+export MQ_SSL_TRUSTSTORE_PATH=/path/to/truststore.jks
+export MQ_SSL_TRUSTSTORE_PASSWORD=truststore-password
+# MQ_APP_PASSWORD not required - certificate provides authentication
+```
+
+**4. mTLS + Username/Password (Dual Authentication):**
+```bash
+export MQ_SSL_CIPHER_SUITE=TLS_RSA_WITH_AES_128_CBC_SHA256
+export MQ_SSL_KEYSTORE_PATH=/path/to/client-keystore.jks
+export MQ_SSL_KEYSTORE_PASSWORD=keystore-password
+export MQ_SSL_TRUSTSTORE_PATH=/path/to/truststore.jks
+export MQ_SSL_TRUSTSTORE_PASSWORD=truststore-password
+export MQ_APP_USERNAME=app
+export MQ_APP_PASSWORD=your-password
+# Both certificate and password authentication
+```
+
+**Disable Peer Name Verification (Development Only):**
+```bash
+export MQ_SSL_PEER_NAME_ENABLED=false  # Not recommended for production
+```
+
+### Certificate Management
+- Keystore formats: JKS (Java KeyStore) or PKCS12
+- Client certificates required for mTLS
+- Server CA certificates in truststore for validation
+- Peer name verification enabled by default
+
+### Additional Security
 - No sensitive data logged at INFO level
 - Modern Java 17 with active security updates
 - Latest dependency versions with security patches
+- Secure defaults for all configurations
 
 ## License
 

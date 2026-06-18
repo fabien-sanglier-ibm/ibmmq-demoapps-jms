@@ -32,6 +32,11 @@ public class Producer {
         		String mqQueueName = getEnvOrDefault("MQ_QUEUE_NAME", "DEV.QUEUE.1");
         		String mqUsername = getEnvOrDefault("MQ_APP_USERNAME", "app");
         		String mqCipherSuite = System.getenv("MQ_SSL_CIPHER_SUITE");
+        		String mqSslKeyStore = System.getenv("MQ_SSL_KEYSTORE_PATH");
+        		String mqSslKeyStorePassword = System.getenv("MQ_SSL_KEYSTORE_PASSWORD");
+        		String mqSslTrustStore = System.getenv("MQ_SSL_TRUSTSTORE_PATH");
+        		String mqSslTrustStorePassword = System.getenv("MQ_SSL_TRUSTSTORE_PASSWORD");
+        		boolean mqSslPeerNameEnabled = Boolean.parseBoolean(getEnvOrDefault("MQ_SSL_PEER_NAME_ENABLED", "true"));
         		String mqMessage = getEnvOrDefault("MQ_MESSAGE", "Test some data here");
         		boolean continuousMode = Boolean.parseBoolean(getEnvOrDefault("MQ_CONTINUOUS_MODE", "true"));
         		int messageCount = parseIntWithValidation("MQ_MESSAGE_COUNT", getEnvOrDefault("MQ_MESSAGE_COUNT", "4000"), 1, Integer.MAX_VALUE);
@@ -41,8 +46,25 @@ public class Producer {
        
         		LOGGER.debug("Resolved MQ environment configuration for producer startup");
        
-        		if (mqAppPassword == null || mqAppPassword.isEmpty()) {
-        			throw new IllegalArgumentException("No environment variable supplied for password, supply env var MQ_APP_PASSWORD with a password.");
+        		// Check if mTLS is configured (client certificate authentication)
+        		boolean isMtlsConfigured = (mqCipherSuite != null && !mqCipherSuite.isEmpty())
+        				&& (mqSslKeyStore != null && !mqSslKeyStore.isEmpty());
+        		
+        		// Check if password is provided
+        		boolean hasPassword = (mqAppPassword != null && !mqAppPassword.isEmpty());
+        		
+        		// Password is required only if mTLS is not configured
+        		if (!isMtlsConfigured && !hasPassword) {
+        			throw new IllegalArgumentException("No environment variable supplied for password. Either provide MQ_APP_PASSWORD or configure mTLS with MQ_SSL_CIPHER_SUITE and MQ_SSL_KEYSTORE_PATH.");
+        		}
+        		
+        		// Log authentication method
+        		if (isMtlsConfigured && hasPassword) {
+        			LOGGER.info("Using mTLS client certificate + username/password authentication");
+        		} else if (isMtlsConfigured) {
+        			LOGGER.info("Using mTLS client certificate authentication only");
+        		} else if (hasPassword) {
+        			LOGGER.info("Using username/password authentication");
         		}
 
                         // Configure MQ connection factory
@@ -51,10 +73,43 @@ public class Producer {
                         LOGGER.debug("Configuring MQ connection factory");
                         connectionFactory.setHostName(mqHost);
                         connectionFactory.setPort(mqPort);
+                        
+                        // Configure TLS/mTLS if cipher suite is provided
                         if (mqCipherSuite != null && !mqCipherSuite.isEmpty()) {
                         	connectionFactory.setSSLCipherSuite(mqCipherSuite);
-                        	LOGGER.debug("TLS cipher suite configured for MQ connection");
+                        	LOGGER.debug("TLS cipher suite configured: {}", mqCipherSuite);
+                        	
+                        	// Configure client certificate keystore for mTLS
+                        	if (mqSslKeyStore != null && !mqSslKeyStore.isEmpty()) {
+                        		System.setProperty("javax.net.ssl.keyStore", mqSslKeyStore);
+                        		LOGGER.debug("SSL keystore path configured: {}", mqSslKeyStore);
+                        		
+                        		if (mqSslKeyStorePassword != null && !mqSslKeyStorePassword.isEmpty()) {
+                        			System.setProperty("javax.net.ssl.keyStorePassword", mqSslKeyStorePassword);
+                        			LOGGER.debug("SSL keystore password configured");
+                        		}
+                        	}
+                        	
+                        	// Configure truststore for server certificate validation
+                        	if (mqSslTrustStore != null && !mqSslTrustStore.isEmpty()) {
+                        		System.setProperty("javax.net.ssl.trustStore", mqSslTrustStore);
+                        		LOGGER.debug("SSL truststore path configured: {}", mqSslTrustStore);
+                        		
+                        		if (mqSslTrustStorePassword != null && !mqSslTrustStorePassword.isEmpty()) {
+                        			System.setProperty("javax.net.ssl.trustStorePassword", mqSslTrustStorePassword);
+                        			LOGGER.debug("SSL truststore password configured");
+                        		}
+                        	}
+                        	
+                        	// Configure peer name verification
+                        	if (!mqSslPeerNameEnabled) {
+                        		connectionFactory.setSSLPeerName("*");
+                        		LOGGER.warn("SSL peer name verification disabled - not recommended for production");
+                        	}
+                        	
+                        	LOGGER.info("mTLS configuration applied");
                         }
+                        
                         connectionFactory.setQueueManager(mqQueueManager);
                         connectionFactory.setChannel(mqChannel);
                         connectionFactory.setTransportType(WMQConstants.WMQ_CM_CLIENT);
@@ -77,8 +132,16 @@ public class Producer {
                         		Integer.valueOf(logFrequency));
                      
                         LOGGER.info("Starting producer connection");
-                        connection = connectionFactory.createConnection(mqUsername, mqAppPassword);
-                        LOGGER.debug("MQ connection created successfully");
+                        // Use appropriate authentication method based on configuration
+                        if (hasPassword) {
+                        	// Username/password authentication (with or without mTLS)
+                        	connection = connectionFactory.createConnection(mqUsername, mqAppPassword);
+                        	LOGGER.debug("MQ connection created successfully using username/password");
+                        } else {
+                        	// mTLS only: client certificate provides authentication
+                        	connection = connectionFactory.createConnection();
+                        	LOGGER.debug("MQ connection created successfully using mTLS client certificate only");
+                        }
                      
                         LOGGER.debug("Creating JMS session");
                         session = connection.createSession(false, Session.AUTO_ACKNOWLEDGE);
