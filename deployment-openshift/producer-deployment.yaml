@@ -40,6 +40,8 @@ spec:
               value: app
             - name: MQ_MESSAGE
               value: "Test message from JMS Producer"
+            - name: MQ_CONTINUOUS_MODE
+              value: "true"
             - name: MQ_MESSAGE_COUNT
               value: "4000"
             - name: MQ_SEND_SLEEP_MILLIS

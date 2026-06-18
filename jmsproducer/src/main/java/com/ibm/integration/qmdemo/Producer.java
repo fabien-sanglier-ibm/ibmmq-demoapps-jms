@@ -33,6 +33,7 @@ public class Producer {
         		String mqUsername = getEnvOrDefault("MQ_APP_USERNAME", "app");
         		String mqCipherSuite = System.getenv("MQ_SSL_CIPHER_SUITE");
         		String mqMessage = getEnvOrDefault("MQ_MESSAGE", "Test some data here");
+        		boolean continuousMode = Boolean.parseBoolean(getEnvOrDefault("MQ_CONTINUOUS_MODE", "true"));
         		int messageCount = parseIntWithValidation("MQ_MESSAGE_COUNT", getEnvOrDefault("MQ_MESSAGE_COUNT", "4000"), 1, Integer.MAX_VALUE);
         		long sendSleepMillis = parseLongWithValidation("MQ_SEND_SLEEP_MILLIS", getEnvOrDefault("MQ_SEND_SLEEP_MILLIS", "1000"), 0, Long.MAX_VALUE);
         		int logFrequency = parseIntWithValidation("MQ_LOG_FREQUENCY", getEnvOrDefault("MQ_LOG_FREQUENCY", "10"), 1, Integer.MAX_VALUE);
@@ -69,7 +70,8 @@ public class Producer {
                         		mqQueueName,
                         		mqAppName,
                         		mqCipherSuite != null && !mqCipherSuite.isEmpty() ? mqCipherSuite : "<not set>");
-                        LOGGER.debug("Producer send loop configured with messageCount={}, sendSleepMillis={} ms, logFrequency={}",
+                        LOGGER.debug("Producer send loop configured with continuousMode={}, messageCount={}, sendSleepMillis={} ms, logFrequency={}",
+                        		Boolean.valueOf(continuousMode),
                         		Integer.valueOf(messageCount),
                         		Long.valueOf(sendSleepMillis),
                         		Integer.valueOf(logFrequency));
@@ -86,19 +88,31 @@ public class Producer {
                      
                         Message message = session.createTextMessage(mqMessage);
                         LOGGER.debug("Prepared JMS text message with payload length={}", Integer.valueOf(mqMessage.length()));
-                     
-                        LOGGER.info("Starting message send loop");
-                     
-                        for (int i = 0; i < messageCount; i++) {
-                        	LOGGER.debug("Sending message iteration {}", Integer.valueOf(i + 1));
-                        	producer.send(message);
-                        	if ((i + 1) % logFrequency == 0 || i + 1 == messageCount) {
-                        		LOGGER.info("Sent {} messages", Integer.valueOf(i + 1));
+                        
+                        if (continuousMode) {
+                        	LOGGER.info("Starting message send loop in CONTINUOUS mode (will run indefinitely)");
+                        	int messagesSent = 0;
+                        	while (true) {
+                        		messagesSent++;
+                        		LOGGER.debug("Sending message iteration {}", Integer.valueOf(messagesSent));
+                        		producer.send(message);
+                        		if (messagesSent % logFrequency == 0) {
+                        			LOGGER.info("Sent {} messages (continuous mode)", Integer.valueOf(messagesSent));
+                        		}
+                        		Thread.sleep(sendSleepMillis);
                         	}
-                        	Thread.sleep(sendSleepMillis);
+                        } else {
+                        	LOGGER.info("Starting message send loop for {} messages", Integer.valueOf(messageCount));
+                        	for (int i = 0; i < messageCount; i++) {
+                        		LOGGER.debug("Sending message iteration {}", Integer.valueOf(i + 1));
+                        		producer.send(message);
+                        		if ((i + 1) % logFrequency == 0 || i + 1 == messageCount) {
+                        			LOGGER.info("Sent {} messages", Integer.valueOf(i + 1));
+                        		}
+                        		Thread.sleep(sendSleepMillis);
+                        	}
+                        	LOGGER.info("Producer finished successfully");
                         }
-                     
-                        LOGGER.info("Producer finished successfully");
                      
                        } catch (JMSException e) {
                         LOGGER.error("JMS error occurred in producer", e);

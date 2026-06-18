@@ -75,9 +75,10 @@ Both applications are configured via environment variables:
 |----------|-------------|---------|
 | `MQ_APP_NAME` | Application name | `MY-PRODUCER` |
 | `MQ_MESSAGE` | Message content to send | `Test some data here` |
-| `MQ_MESSAGE_COUNT` | Number of messages to send | `4000` |
-| `MQ_SEND_SLEEP_MILLIS` | Sleep between sends (ms) | `3000` |
-| `MQ_LOG_FREQUENCY` | Log progress every N messages | `100` |
+| `MQ_CONTINUOUS_MODE` | Run continuously (true/false) | `true` |
+| `MQ_MESSAGE_COUNT` | Number of messages to send (ignored in continuous mode) | `4000` |
+| `MQ_SEND_SLEEP_MILLIS` | Sleep between sends (ms) | `1000` |
+| `MQ_LOG_FREQUENCY` | Log progress every N messages | `10` |
 
 ### Consumer-Specific Configuration
 
@@ -109,6 +110,7 @@ This creates executable JAR files with all dependencies:
 
 ### Producer
 
+**Continuous Mode (run indefinitely - default):**
 ```bash
 export MQ_HOST=localhost
 export MQ_PORT=1414
@@ -117,11 +119,28 @@ export MQ_CHANNEL=DEV.APP.SVRCONN
 export MQ_QUEUE_NAME=DEV.QUEUE.1
 export MQ_APP_USERNAME=app
 export MQ_APP_PASSWORD=your-password
+export MQ_SEND_SLEEP_MILLIS=1000
+
+java -jar jmsproducer/target/producer-1.0-SNAPSHOT-jar-with-dependencies.jar
+```
+
+**Standard Mode (send a specific number of messages):**
+```bash
+export MQ_HOST=localhost
+export MQ_PORT=1414
+export MQ_QUEUE_MANAGER=QM1
+export MQ_CHANNEL=DEV.APP.SVRCONN
+export MQ_QUEUE_NAME=DEV.QUEUE.1
+export MQ_APP_USERNAME=app
+export MQ_APP_PASSWORD=your-password
+export MQ_CONTINUOUS_MODE=false
 export MQ_MESSAGE_COUNT=100
 export MQ_SEND_SLEEP_MILLIS=1000
 
 java -jar jmsproducer/target/producer-1.0-SNAPSHOT-jar-with-dependencies.jar
 ```
+
+To stop the producer, use `Ctrl+C` or send a SIGTERM signal.
 
 ### Consumer
 
@@ -260,9 +279,12 @@ kubectl apply -f deployment-openshift/qmdemo-consumer-deployment.yaml
 ## Features
 
 ### Producer
-- Configurable message count and send rate
+- **Two operating modes**:
+  - **Standard mode**: Send a specific number of messages then exit
+  - **Continuous mode**: Run indefinitely until stopped
+- Configurable message content and send rate
 - Automatic reconnection on connection loss
-- Progress logging every 100 messages
+- Configurable progress logging frequency
 - Proper resource cleanup on shutdown
 - Validated configuration parameters
 
