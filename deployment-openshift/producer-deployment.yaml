@@ -1,0 +1,71 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jms-producer
+  labels:
+    app: jms-producer
+    app.kubernetes.io/name: jms-producer
+    app.kubernetes.io/component: messaging
+    app.kubernetes.io/part-of: ibmmq-jms-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jms-producer
+  template:
+    metadata:
+      labels:
+        app: jms-producer
+        app.kubernetes.io/name: jms-producer
+        app.kubernetes.io/component: messaging
+    spec:
+      containers:
+        - name: jms-producer
+          image: ghcr.io/fabien-sanglier-ibm/ibmmq-demoapps-jms/jmsproducer:latest
+          imagePullPolicy: Always
+          env:
+            - name: MQ_HOST
+              value: qmdemo-ibm-mq
+            - name: MQ_PORT
+              value: "1414"
+            - name: MQ_QUEUE_MANAGER
+              value: QMDEMO
+            - name: MQ_CHANNEL
+              value: DEV.APP.SVRCONN.0TLS
+            - name: MQ_QUEUE_NAME
+              value: DEV.QUEUE.1
+            - name: MQ_APP_NAME
+              value: MY-PRODUCER
+            - name: MQ_APP_USERNAME
+              value: app
+            - name: MQ_MESSAGE
+              value: "Test message from JMS Producer"
+            - name: MQ_MESSAGE_COUNT
+              value: "4000"
+            - name: MQ_SEND_SLEEP_MILLIS
+              value: "3000"
+            - name: MQ_LOG_FREQUENCY
+              value: "100"
+            - name: MQ_APP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mq-client-auth
+                  key: password
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+      restartPolicy: Always
+
+# Made with Bob

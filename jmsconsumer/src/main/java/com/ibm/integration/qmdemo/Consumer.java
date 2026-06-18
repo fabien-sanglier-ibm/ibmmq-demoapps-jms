@@ -40,6 +40,7 @@ public class Consumer {
         		String mqUsername = getEnvOrDefault("MQ_APP_USERNAME", "app");
         		String mqCipherSuite = System.getenv("MQ_SSL_CIPHER_SUITE");
         		long receiveSleepMillis = parseLongWithValidation("MQ_RECEIVE_SLEEP_MILLIS", getEnvOrDefault("MQ_RECEIVE_SLEEP_MILLIS", "500"), 0, Long.MAX_VALUE);
+        		long receiveTimeoutMillis = parseLongWithValidation("MQ_RECEIVE_TIMEOUT_MILLIS", getEnvOrDefault("MQ_RECEIVE_TIMEOUT_MILLIS", "1000"), 100, Long.MAX_VALUE);
         		String mqAppPassword = System.getenv("MQ_APP_PASSWORD");
        
         		LOGGER.debug("Resolved MQ environment configuration for consumer startup");
@@ -74,6 +75,7 @@ public class Consumer {
                         		mqAppName,
                         		mqCipherSuite != null && !mqCipherSuite.isEmpty() ? mqCipherSuite : "<not set>");
                         LOGGER.debug("Consumer receive sleep configured to {} ms", Long.valueOf(receiveSleepMillis));
+                        LOGGER.debug("Consumer receive timeout configured to {} ms", Long.valueOf(receiveTimeoutMillis));
                      
                         LOGGER.info("Starting consumer connection");
                         connection = connectionFactory.createConnection(mqUsername, mqAppPassword);
@@ -91,7 +93,7 @@ public class Consumer {
                      
                         while (running) {
                         	LOGGER.debug("Waiting to receive message {}", Integer.valueOf(messageCount));
-                        	Message message = consumer.receive(1000); // Use timeout to allow checking running flag
+                        	Message message = consumer.receive(receiveTimeoutMillis);
                         	
                         	if (message != null) {
                         		LOGGER.info("Received message, count={}", Integer.valueOf(messageCount));

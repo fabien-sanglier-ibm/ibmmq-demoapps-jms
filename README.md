@@ -77,6 +77,7 @@ Both applications are configured via environment variables:
 | `MQ_MESSAGE` | Message content to send | `Test some data here` |
 | `MQ_MESSAGE_COUNT` | Number of messages to send | `4000` |
 | `MQ_SEND_SLEEP_MILLIS` | Sleep between sends (ms) | `3000` |
+| `MQ_LOG_FREQUENCY` | Log progress every N messages | `100` |
 
 ### Consumer-Specific Configuration
 
@@ -84,6 +85,7 @@ Both applications are configured via environment variables:
 |----------|-------------|---------|
 | `MQ_APP_NAME` | Application name | `MY-CONSUMER` |
 | `MQ_RECEIVE_SLEEP_MILLIS` | Sleep after receive (ms) | `500` |
+| `MQ_RECEIVE_TIMEOUT_MILLIS` | Receive timeout (ms) | `1000` |
 
 ## Building
 

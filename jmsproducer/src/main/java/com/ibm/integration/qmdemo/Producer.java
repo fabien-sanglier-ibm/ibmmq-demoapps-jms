@@ -16,9 +16,8 @@ import com.ibm.msg.client.wmq.WMQConstants;
 public class Producer {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(Producer.class);
-	private static final int LOG_FREQUENCY = 100;
 
-        public static void main(String[] args) {
+	       public static void main(String[] args) {
         	Connection connection = null;
         	Session session = null;
         	MessageProducer producer = null;
@@ -35,7 +34,8 @@ public class Producer {
         		String mqCipherSuite = System.getenv("MQ_SSL_CIPHER_SUITE");
         		String mqMessage = getEnvOrDefault("MQ_MESSAGE", "Test some data here");
         		int messageCount = parseIntWithValidation("MQ_MESSAGE_COUNT", getEnvOrDefault("MQ_MESSAGE_COUNT", "4000"), 1, Integer.MAX_VALUE);
-        		long sendSleepMillis = parseLongWithValidation("MQ_SEND_SLEEP_MILLIS", getEnvOrDefault("MQ_SEND_SLEEP_MILLIS", "3000"), 0, Long.MAX_VALUE);
+        		long sendSleepMillis = parseLongWithValidation("MQ_SEND_SLEEP_MILLIS", getEnvOrDefault("MQ_SEND_SLEEP_MILLIS", "1000"), 0, Long.MAX_VALUE);
+        		int logFrequency = parseIntWithValidation("MQ_LOG_FREQUENCY", getEnvOrDefault("MQ_LOG_FREQUENCY", "10"), 1, Integer.MAX_VALUE);
         		String mqAppPassword = System.getenv("MQ_APP_PASSWORD");
        
         		LOGGER.debug("Resolved MQ environment configuration for producer startup");
@@ -69,9 +69,10 @@ public class Producer {
                         		mqQueueName,
                         		mqAppName,
                         		mqCipherSuite != null && !mqCipherSuite.isEmpty() ? mqCipherSuite : "<not set>");
-                        LOGGER.debug("Producer send loop configured with messageCount={} and sendSleepMillis={} ms",
+                        LOGGER.debug("Producer send loop configured with messageCount={}, sendSleepMillis={} ms, logFrequency={}",
                         		Integer.valueOf(messageCount),
-                        		Long.valueOf(sendSleepMillis));
+                        		Long.valueOf(sendSleepMillis),
+                        		Integer.valueOf(logFrequency));
                      
                         LOGGER.info("Starting producer connection");
                         connection = connectionFactory.createConnection(mqUsername, mqAppPassword);
@@ -91,7 +92,7 @@ public class Producer {
                         for (int i = 0; i < messageCount; i++) {
                         	LOGGER.debug("Sending message iteration {}", Integer.valueOf(i + 1));
                         	producer.send(message);
-                        	if ((i + 1) % LOG_FREQUENCY == 0 || i + 1 == messageCount) {
+                        	if ((i + 1) % logFrequency == 0 || i + 1 == messageCount) {
                         		LOGGER.info("Sent {} messages", Integer.valueOf(i + 1));
                         	}
                         	Thread.sleep(sendSleepMillis);

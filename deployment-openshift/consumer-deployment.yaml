@@ -1,22 +1,27 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mq-producer
+  name: jms-consumer
   labels:
-    app: mq-producer
+    app: jms-consumer
+    app.kubernetes.io/name: jms-consumer
+    app.kubernetes.io/component: messaging
+    app.kubernetes.io/part-of: ibmmq-jms-demo
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: mq-producer
+      app: jms-consumer
   template:
     metadata:
       labels:
-        app: mq-producer
+        app: jms-consumer
+        app.kubernetes.io/name: jms-consumer
+        app.kubernetes.io/component: messaging
     spec:
       containers:
-        - name: mq-producer
-          image: image-registry.openshift-image-registry.svc:5000/$(NAMESPACE)/mq-producer:latest
+        - name: jms-consumer
+          image: ghcr.io/fabien-sanglier-ibm/ibmmq-demoapps-jms/jmsconsumer:latest
           imagePullPolicy: Always
           env:
             - name: MQ_HOST
@@ -30,15 +35,13 @@ spec:
             - name: MQ_QUEUE_NAME
               value: DEV.QUEUE.1
             - name: MQ_APP_NAME
-              value: MY-PRODUCER
+              value: MY-CONSUMER
             - name: MQ_APP_USERNAME
               value: app
-            - name: MQ_MESSAGE
-              value: Test some data here
-            - name: MQ_MESSAGE_COUNT
-              value: "4000"
-            - name: MQ_SEND_SLEEP_MILLIS
-              value: "3000"
+            - name: MQ_RECEIVE_SLEEP_MILLIS
+              value: "500"
+            - name: MQ_RECEIVE_TIMEOUT_MILLIS
+              value: "1000"
             - name: MQ_APP_PASSWORD
               valueFrom:
                 secretKeyRef:
@@ -51,5 +54,14 @@ spec:
             limits:
               cpu: 500m
               memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            capabilities:
+              drop:
+                - ALL
+            seccompProfile:
+              type: RuntimeDefault
+      restartPolicy: Always
 
 # Made with Bob
