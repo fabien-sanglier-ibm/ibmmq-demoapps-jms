@@ -2,26 +2,10 @@ name: Build and Push Container Images
 
 on:
   push:
-    branches:
-      - main
-      - master
     tags:
       - 'v*.*.*'
       - 'v*.*.*-*'
-    paths:
-      - 'jmsproducer/**'
-      - 'jmsconsumer/**'
-      - '.github/workflows/build-and-push.yml'
-  pull_request:
-    branches:
-      - main
-      - master
-    paths:
-      - 'jmsproducer/**'
-      - 'jmsconsumer/**'
   workflow_dispatch:
-  release:
-    types: [published]
 
 env:
   REGISTRY: ghcr.io
