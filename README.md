@@ -73,11 +73,13 @@ Both applications are configured via environment variables:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `MQ_SSL_CIPHER_SUITE` | TLS cipher suite (e.g., `TLS_RSA_WITH_AES_128_CBC_SHA256`) | - |
+| `MQ_SSL_CA_CERT_PATH` | Path to CA certificate (PEM format) - **recommended approach** | - |
+| `MQ_SSL_TRUSTSTORE_PATH` | Path to truststore (JKS) - alternative to CA cert | - |
+| `MQ_SSL_TRUSTSTORE_PASSWORD` | Password for truststore (not needed with CA cert) | - |
 | `MQ_SSL_KEYSTORE_PATH` | Path to client keystore (JKS/PKCS12) for mTLS | - |
 | `MQ_SSL_KEYSTORE_PASSWORD` | Password for client keystore | - |
-| `MQ_SSL_TRUSTSTORE_PATH` | Path to truststore for server certificate validation | - |
-| `MQ_SSL_TRUSTSTORE_PASSWORD` | Password for truststore | - |
 | `MQ_SSL_PEER_NAME_ENABLED` | Enable SSL peer name verification (true/false) | `true` |
+| `MQ_SSL_HOSTNAME_VERIFICATION_ENABLED` | Enable hostname verification (true/false) | `true` |
 
 ### Producer-Specific Configuration
 
@@ -346,57 +348,74 @@ Both applications support flexible authentication with three modes:
    - Useful when MQ is configured to require both methods
 
 ### TLS/SSL Support
-Both applications support multiple TLS configurations:
+Both applications support multiple TLS configurations with two approaches for certificate trust:
 
-**1. Username/Password Only (No TLS):**
-```bash
-export MQ_APP_USERNAME=app
-export MQ_APP_PASSWORD=your-password
-# No encryption - not recommended for production
-```
+#### Approach 1: CA Certificate (Recommended)
+Use a PEM-formatted CA certificate directly - no JKS truststore or password needed:
 
-**2. TLS with Username/Password (Server Authentication):**
+**TLS with CA Certificate + Username/Password:**
 ```bash
 export MQ_SSL_CIPHER_SUITE=TLS_RSA_WITH_AES_128_CBC_SHA256
-export MQ_SSL_TRUSTSTORE_PATH=/path/to/truststore.jks
-export MQ_SSL_TRUSTSTORE_PASSWORD=truststore-password
+export MQ_SSL_CA_CERT_PATH=/etc/ssl/certs/ca.crt
 export MQ_APP_USERNAME=app
 export MQ_APP_PASSWORD=your-password
 # Encrypted transport + password authentication
+# No truststore password needed!
 ```
 
-**3. mTLS Only (Client Certificate Authentication):**
+**mTLS with CA Certificate (Client Certificate Authentication):**
 ```bash
 export MQ_SSL_CIPHER_SUITE=TLS_RSA_WITH_AES_128_CBC_SHA256
+export MQ_SSL_CA_CERT_PATH=/etc/ssl/certs/ca.crt
 export MQ_SSL_KEYSTORE_PATH=/path/to/client-keystore.jks
 export MQ_SSL_KEYSTORE_PASSWORD=keystore-password
-export MQ_SSL_TRUSTSTORE_PATH=/path/to/truststore.jks
-export MQ_SSL_TRUSTSTORE_PASSWORD=truststore-password
 # MQ_APP_PASSWORD not required - certificate provides authentication
 ```
 
-**4. mTLS + Username/Password (Dual Authentication):**
+#### Approach 2: JKS Truststore (Traditional)
+Use a JKS truststore file (requires password):
+
+**TLS with JKS Truststore + Username/Password:**
 ```bash
 export MQ_SSL_CIPHER_SUITE=TLS_RSA_WITH_AES_128_CBC_SHA256
-export MQ_SSL_KEYSTORE_PATH=/path/to/client-keystore.jks
-export MQ_SSL_KEYSTORE_PASSWORD=keystore-password
 export MQ_SSL_TRUSTSTORE_PATH=/path/to/truststore.jks
 export MQ_SSL_TRUSTSTORE_PASSWORD=truststore-password
 export MQ_APP_USERNAME=app
 export MQ_APP_PASSWORD=your-password
-# Both certificate and password authentication
 ```
 
-**Disable Peer Name Verification (Development Only):**
+**mTLS with JKS Truststore:**
 ```bash
-export MQ_SSL_PEER_NAME_ENABLED=false  # Not recommended for production
+export MQ_SSL_CIPHER_SUITE=TLS_RSA_WITH_AES_128_CBC_SHA256
+export MQ_SSL_KEYSTORE_PATH=/path/to/client-keystore.jks
+export MQ_SSL_KEYSTORE_PASSWORD=keystore-password
+export MQ_SSL_TRUSTSTORE_PATH=/path/to/truststore.jks
+export MQ_SSL_TRUSTSTORE_PASSWORD=truststore-password
 ```
+
+#### Hostname Verification Control
+Control certificate hostname validation (both enabled by default for security):
+
+```bash
+# Production (recommended - both enabled)
+export MQ_SSL_PEER_NAME_ENABLED=true
+export MQ_SSL_HOSTNAME_VERIFICATION_ENABLED=true
+
+# Development/Testing (disable if needed)
+export MQ_SSL_PEER_NAME_ENABLED=false
+export MQ_SSL_HOSTNAME_VERIFICATION_ENABLED=false
+```
+
+**Note:** Disabling verification is not recommended for production environments.
 
 ### Certificate Management
-- Keystore formats: JKS (Java KeyStore) or PKCS12
-- Client certificates required for mTLS
-- Server CA certificates in truststore for validation
-- Peer name verification enabled by default
+- **CA Certificate (PEM)**: Recommended - no password needed, simpler management
+- **JKS Truststore**: Traditional approach - requires password
+- **Keystore formats**: JKS (Java KeyStore) or PKCS12 for client certificates
+- **Client certificates**: Required for mTLS authentication
+- **Hostname verification**: Validates certificate CN/SAN against connection hostname
+- **Peer name verification**: IBM MQ specific DN verification
+- Both verification mechanisms enabled by default for security
 
 ### Additional Security
 - No sensitive data logged at INFO level
@@ -407,6 +426,18 @@ export MQ_SSL_PEER_NAME_ENABLED=false  # Not recommended for production
 ## License
 
 See [LICENSE](LICENSE) file for details.
+
+## Additional Documentation
+
+Detailed guides are available in the `docs/` directory:
+
+- **[CA-CERTIFICATE-SETUP.md](docs/CA-CERTIFICATE-SETUP.md)** - Complete guide for using CA certificates directly (recommended)
+- **[QUICK-START-CA-CERT.md](docs/QUICK-START-CA-CERT.md)** - Quick start guide for CA certificate configuration
+- **[JAVA-SSL-PROPERTIES.md](docs/JAVA-SSL-PROPERTIES.md)** - Using JAVA_TOOL_OPTIONS for SSL configuration
+- **[SECURE-PASSWORD-OPTIONS.md](docs/SECURE-PASSWORD-OPTIONS.md)** - Secure password management strategies
+- **[HOSTNAME-VERIFICATION.md](docs/HOSTNAME-VERIFICATION.md)** - Hostname and peer name verification options
+- **[DEBUG-LOGGING-GUIDE.md](docs/DEBUG-LOGGING-GUIDE.md)** - Enable debug logging for troubleshooting
+- **[TROUBLESHOOTING-CA-CERT.md](docs/TROUBLESHOOTING-CA-CERT.md)** - Troubleshoot certificate validation issues
 
 ## Contributing
 

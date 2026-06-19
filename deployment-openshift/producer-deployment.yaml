@@ -53,10 +53,12 @@ spec:
                 secretKeyRef:
                   name: mq-client-auth
                   key: password
-            # Uncomment below for TLS/mTLS configuration
-            # Option 1: Using JKS truststore (traditional approach)
-            # - name: MQ_SSL_CIPHER_SUITE
-            #   value: "TLS_RSA_WITH_AES_128_CBC_SHA256"
+            # TLS/mTLS configuration using CA certificate directly (PEM format)
+            - name: MQ_SSL_CIPHER_SUITE
+              value: "TLS_RSA_WITH_AES_128_CBC_SHA256"
+            - name: MQ_SSL_CA_CERT_PATH
+              value: "/etc/ssl/certs/ca.crt"
+            # Uncomment below for mTLS (client certificate authentication)
             # - name: MQ_SSL_KEYSTORE_PATH
             #   value: "/etc/ssl/certs/client-keystore.jks"
             # - name: MQ_SSL_KEYSTORE_PASSWORD
@@ -64,35 +66,39 @@ spec:
             #     secretKeyRef:
             #       name: mq-tls-certs
             #       key: keystore-password
-            # - name: MQ_SSL_TRUSTSTORE_PATH
-            #   value: "/etc/ssl/certs/truststore.jks"
-            # - name: MQ_SSL_TRUSTSTORE_PASSWORD
-            #   valueFrom:
-            #     secretKeyRef:
-            #       name: mq-tls-certs
-            #       key: truststore-password
-            # - name: MQ_SSL_PEER_NAME_ENABLED
-            #   value: "true"
+            - name: MQ_SSL_PEER_NAME_ENABLED
+              value: "true"
+            - name: MQ_SSL_HOSTNAME_VERIFICATION_ENABLED
+              value: "true"
             
-            # Option 2: Using CA certificate directly (PEM format)
-            # - name: MQ_SSL_CIPHER_SUITE
-            #   value: "TLS_RSA_WITH_AES_128_CBC_SHA256"
-            # - name: MQ_SSL_CA_CERT_PATH
-            #   value: "/etc/ssl/certs/ca.crt"
-            # - name: MQ_SSL_KEYSTORE_PATH
-            #   value: "/etc/ssl/certs/client-keystore.jks"
-            # - name: MQ_SSL_KEYSTORE_PASSWORD
-            #   valueFrom:
-            #     secretKeyRef:
-            #       name: mq-tls-certs
-            #       key: keystore-password
-            # - name: MQ_SSL_PEER_NAME_ENABLED
-            #   value: "true"
-          # Uncomment below to mount TLS certificates from a secret
-          # volumeMounts:
-          #   - name: tls-certs
-          #     mountPath: /etc/ssl/certs
-          #     readOnly: true
+            # Alternative: Set Java SSL properties directly via JAVA_TOOL_OPTIONS
+            # This bypasses the application code and sets JVM system properties
+            # Uncomment to use JKS truststore via Java properties instead of MQ_SSL_CA_CERT_PATH
+            # - name: JAVA_TOOL_OPTIONS
+            #   value: "-Djavax.net.ssl.trustStore=/etc/ssl/certs/truststore.jks -Djavax.net.ssl.trustStorePassword=changeit -Djavax.net.ssl.keyStore=/etc/ssl/certs/client-keystore.jks -Djavax.net.ssl.keyStorePassword=changeit"
+            
+            # Debug Logging Options (uncomment as needed for troubleshooting)
+            # Option 1: Enable SSL/TLS debug logging (shows certificate validation, handshake details)
+            # - name: JAVA_TOOL_OPTIONS
+            #   value: "-Djavax.net.debug=ssl:handshake:verbose"
+            
+            # Option 2: Enable all SSL debug (very verbose - shows everything)
+            # - name: JAVA_TOOL_OPTIONS
+            #   value: "-Djavax.net.debug=all"
+            
+            # Option 3: Enable specific SSL debug categories
+            # - name: JAVA_TOOL_OPTIONS
+            #   value: "-Djavax.net.debug=ssl,handshake,data,trustmanager"
+            
+            # Option 4: Enable IBM MQ trace (for MQ-specific issues)
+            # - name: MQJMS_TRACE_LEVEL
+            #   value: "9"
+            # - name: MQJMS_TRACE_DIR
+            #   value: "/tmp"
+          volumeMounts:
+            - name: tls-certs
+              mountPath: /etc/ssl/certs
+              readOnly: true
           resources:
             requests:
               cpu: 100m
@@ -108,28 +114,17 @@ spec:
                 - ALL
             seccompProfile:
               type: RuntimeDefault
-      # Uncomment below to mount TLS certificates from a secret
-      # Option 1: Mount JKS files (traditional approach)
-      # volumes:
-      #   - name: tls-certs
-      #     secret:
-      #       secretName: mq-tls-certs
-      #       items:
-      #         - key: client-keystore.jks
-      #           path: client-keystore.jks
-      #         - key: truststore.jks
-      #           path: truststore.jks
-      
-      # Option 2: Mount CA certificate directly (PEM format)
-      # volumes:
-      #   - name: tls-certs
-      #     secret:
-      #       secretName: mq-tls-certs
-      #       items:
-      #         - key: ca.crt
-      #           path: ca.crt
-      #         - key: client-keystore.jks
-      #           path: client-keystore.jks
+      # Mount CA certificate from secret (PEM format)
+      volumes:
+        - name: tls-certs
+          secret:
+            secretName: mq-tls-certs
+            items:
+              - key: ca.crt
+                path: ca.crt
+              # Uncomment below for mTLS (client certificate authentication)
+              # - key: client-keystore.jks
+              #   path: client-keystore.jks
       restartPolicy: Always
 
 # Made with Bob

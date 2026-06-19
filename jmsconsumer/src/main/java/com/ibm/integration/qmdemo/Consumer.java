@@ -45,6 +45,7 @@ public class Consumer {
         		String mqSslTrustStorePassword = System.getenv("MQ_SSL_TRUSTSTORE_PASSWORD");
         		String mqSslCaCertPath = System.getenv("MQ_SSL_CA_CERT_PATH");
         		boolean mqSslPeerNameEnabled = Boolean.parseBoolean(getEnvOrDefault("MQ_SSL_PEER_NAME_ENABLED", "true"));
+        		boolean mqSslHostnameVerificationEnabled = Boolean.parseBoolean(getEnvOrDefault("MQ_SSL_HOSTNAME_VERIFICATION_ENABLED", "true"));
         		long receiveSleepMillis = parseLongWithValidation("MQ_RECEIVE_SLEEP_MILLIS", getEnvOrDefault("MQ_RECEIVE_SLEEP_MILLIS", "500"), 0, Long.MAX_VALUE);
         		long receiveTimeoutMillis = parseLongWithValidation("MQ_RECEIVE_TIMEOUT_MILLIS", getEnvOrDefault("MQ_RECEIVE_TIMEOUT_MILLIS", "1000"), 100, Long.MAX_VALUE);
         		String mqAppPassword = System.getenv("MQ_APP_PASSWORD");
@@ -108,7 +109,8 @@ public class Consumer {
                         	}
                         	// Option 2: Use CA certificate directly (PEM format)
                         	else if (mqSslCaCertPath != null && !mqSslCaCertPath.isEmpty()) {
-                        		configureCaCertificate(mqSslCaCertPath);
+                        		javax.net.ssl.SSLSocketFactory sslSocketFactory = configureCaCertificate(mqSslCaCertPath);
+                        		connectionFactory.setSSLSocketFactory(sslSocketFactory);
                         		LOGGER.debug("SSL CA certificate path configured: {}", mqSslCaCertPath);
                         	}
                         	
@@ -118,7 +120,17 @@ public class Consumer {
                         		LOGGER.warn("SSL peer name verification disabled - not recommended for production");
                         	}
                         	
-                        	LOGGER.info("mTLS configuration applied");
+                        	// Configure hostname verification (certificate CN/SAN matching)
+                        	if (mqSslHostnameVerificationEnabled) {
+                        		connectionFactory.setTargetClientMatching(true);
+                        		LOGGER.debug("SSL hostname verification enabled (certificate CN/SAN will be validated)");
+                        	} else {
+                        		connectionFactory.setTargetClientMatching(false);
+                        		LOGGER.warn("SSL hostname verification disabled - certificate CN/SAN will not be validated - not recommended for production");
+                        	}
+                        	
+                        	LOGGER.info("TLS configuration applied (peerNameEnabled={}, hostnameVerificationEnabled={})",
+                        		mqSslPeerNameEnabled, mqSslHostnameVerificationEnabled);
                         }
                         
                         connectionFactory.setQueueManager(mqQueueManager);
@@ -250,10 +262,10 @@ public class Consumer {
         }
         
         /**
-        	* Configure SSL to trust a CA certificate from a PEM file.
-        	* This creates an in-memory truststore from the CA certificate.
-        	*/
-        private static void configureCaCertificate(String caCertPath) {
+         * Configure SSL to trust a CA certificate from a PEM file.
+         * This creates an in-memory truststore from the CA certificate and returns an SSLSocketFactory.
+         */
+        private static javax.net.ssl.SSLSocketFactory configureCaCertificate(String caCertPath) {
         	try {
         		// Read the CA certificate from PEM file
         		java.io.FileInputStream fis = new java.io.FileInputStream(caCertPath);
@@ -275,10 +287,13 @@ public class Consumer {
         		javax.net.ssl.SSLContext sslContext = javax.net.ssl.SSLContext.getInstance("TLS");
         		sslContext.init(null, tmf.getTrustManagers(), new java.security.SecureRandom());
         		
-        		// Set as default SSL context
+        		// Set as default SSL context (for other Java components)
         		javax.net.ssl.SSLContext.setDefault(sslContext);
         		
         		LOGGER.info("Successfully configured CA certificate from: {}", caCertPath);
+        		
+        		// Return SSLSocketFactory for IBM MQ connection factory
+        		return sslContext.getSocketFactory();
         	} catch (Exception e) {
         		throw new RuntimeException("Failed to configure CA certificate from: " + caCertPath, e);
         	}
