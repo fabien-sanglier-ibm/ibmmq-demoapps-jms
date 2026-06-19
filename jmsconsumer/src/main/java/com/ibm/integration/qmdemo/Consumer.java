@@ -56,6 +56,8 @@ public class Consumer {
 			long receiveTimeoutMillis = parseLongWithValidation("MQ_RECEIVE_TIMEOUT_MILLIS",
 					getEnvOrDefault("MQ_RECEIVE_TIMEOUT_MILLIS", "1000"), 100, Long.MAX_VALUE);
 			boolean enableMessageCount = Boolean.parseBoolean(getEnvOrDefault("MQ_ENABLE_MESSAGE_COUNT", "false"));
+			int clientReconnectTimeout = parseIntWithValidation("MQ_CLIENT_RECONNECT_TIMEOUT",
+					getEnvOrDefault("MQ_CLIENT_RECONNECT_TIMEOUT", "300"), 0, Integer.MAX_VALUE);
 			String mqAppPassword = System.getenv("MQ_APP_PASSWORD");
 
 			LOGGER.debug("Resolved MQ environment configuration for consumer startup");
@@ -159,6 +161,8 @@ public class Consumer {
 			connectionFactory.setTransportType(WMQConstants.WMQ_CM_CLIENT);
 			connectionFactory.setAppName(mqAppName);
 			connectionFactory.setClientReconnectOptions(WMQConstants.WMQ_CLIENT_RECONNECT);
+			connectionFactory.setClientReconnectTimeout(clientReconnectTimeout);
+			LOGGER.debug("Client reconnect enabled with {} second timeout", clientReconnectTimeout);
 
 			if (usingCcdt) {
 				LOGGER.info(

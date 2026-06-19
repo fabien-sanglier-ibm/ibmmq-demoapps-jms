@@ -70,6 +70,7 @@ Both applications are configured via environment variables:
 | `MQ_QUEUE_NAME` | Queue name | `DEV.QUEUE.1` |
 | `MQ_APP_USERNAME` | Application username | `app` |
 | `MQ_APP_PASSWORD` | Application password (required unless using mTLS) | - |
+| `MQ_CLIENT_RECONNECT_TIMEOUT` | Client reconnect timeout in seconds | `300` (5 minutes) |
 
 ### TLS/mTLS Configuration
 

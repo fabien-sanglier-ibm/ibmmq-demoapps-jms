@@ -52,6 +52,8 @@ public class Producer {
 					getEnvOrDefault("MQ_SEND_SLEEP_MILLIS", "1000"), 0, Long.MAX_VALUE);
 			int logFrequency = parseIntWithValidation("MQ_LOG_FREQUENCY", getEnvOrDefault("MQ_LOG_FREQUENCY", "10"), 1,
 					Integer.MAX_VALUE);
+			int clientReconnectTimeout = parseIntWithValidation("MQ_CLIENT_RECONNECT_TIMEOUT",
+					getEnvOrDefault("MQ_CLIENT_RECONNECT_TIMEOUT", "300"), 0, Integer.MAX_VALUE);
 			String mqAppPassword = System.getenv("MQ_APP_PASSWORD");
 
 			LOGGER.debug("Resolved MQ environment configuration for producer startup");
@@ -155,6 +157,8 @@ public class Producer {
 			connectionFactory.setTransportType(WMQConstants.WMQ_CM_CLIENT);
 			connectionFactory.setAppName(mqAppName);
 			connectionFactory.setClientReconnectOptions(WMQConstants.WMQ_CLIENT_RECONNECT);
+			connectionFactory.setClientReconnectTimeout(clientReconnectTimeout);
+			LOGGER.debug("Client reconnect enabled with {} second timeout", clientReconnectTimeout);
 
 			if (usingCcdt) {
 				LOGGER.info(
