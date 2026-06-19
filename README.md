@@ -1,6 +1,6 @@
 # IBM MQ Demo Apps - JMS
 
-> 🤖 **Built with Bob** - This project was vibecoded with [Bob](https://github.com/RooVetGit/Roo-Code), an AI coding assistant that helped create robust, production-ready code with comprehensive documentation.
+> 🤖 **Built with IBM Bob** - This project was vibecoded with [IBM Bob](https://www.ibm.com/products/watsonx-code-assistant/bob), an AI coding assistant that helped create robust, production-ready code with comprehensive documentation.
 
 Simple project demonstrating JMS Producer and Consumer applications for IBM MQ.
 
