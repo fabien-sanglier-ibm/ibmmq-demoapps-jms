@@ -101,6 +101,7 @@ Both applications are configured via environment variables:
 | `MQ_APP_NAME` | Application name | `MY-CONSUMER` |
 | `MQ_RECEIVE_SLEEP_MILLIS` | Sleep after receive (ms) | `500` |
 | `MQ_RECEIVE_TIMEOUT_MILLIS` | Receive timeout (ms) | `1000` |
+| `MQ_ENABLE_MESSAGE_COUNT` | Enable cumulative message counting (true/false) | `false` |
 
 ## Building
 
@@ -174,7 +175,35 @@ To stop the consumer gracefully, use `Ctrl+C` or send a SIGTERM signal.
 
 ## Docker
 
-Build and run using Docker:
+### Docker Compose (Recommended for Local Development)
+
+The easiest way to run the complete stack locally:
+
+```bash
+# Start IBM MQ + Producer + Consumer
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop everything
+docker-compose down
+```
+
+This starts:
+- IBM MQ Server (ports 1414, 9443)
+- JMS Producer (continuous mode)
+- JMS Consumer
+
+**Access IBM MQ Web Console:** https://localhost:9443/ibmmq/console/
+- Username: `admin`
+- Password: `passw0rd`
+
+See the [Docker Compose Guide](docs/DOCKER-COMPOSE-GUIDE.md) for detailed configuration options, troubleshooting, and advanced scenarios.
+
+### Individual Docker Containers
+
+Build and run containers individually:
 
 ```bash
 # Build Producer image
@@ -433,11 +462,17 @@ See [LICENSE](LICENSE) file for details.
 
 Detailed guides are available in the `docs/` directory:
 
-- **[CA-CERTIFICATE-SETUP.md](docs/CA-CERTIFICATE-SETUP.md)** - Complete guide for using CA certificates directly (recommended)
+### Getting Started
+- **[DOCKER-COMPOSE-GUIDE.md](docs/DOCKER-COMPOSE-GUIDE.md)** - Complete guide for local development with Docker Compose
 - **[QUICK-START-CA-CERT.md](docs/QUICK-START-CA-CERT.md)** - Quick start guide for CA certificate configuration
+
+### SSL/TLS Configuration
+- **[CA-CERTIFICATE-SETUP.md](docs/CA-CERTIFICATE-SETUP.md)** - Complete guide for using CA certificates directly (recommended)
 - **[JAVA-SSL-PROPERTIES.md](docs/JAVA-SSL-PROPERTIES.md)** - Using JAVA_TOOL_OPTIONS for SSL configuration
 - **[SECURE-PASSWORD-OPTIONS.md](docs/SECURE-PASSWORD-OPTIONS.md)** - Secure password management strategies
 - **[HOSTNAME-VERIFICATION.md](docs/HOSTNAME-VERIFICATION.md)** - Hostname and peer name verification options
+
+### Troubleshooting
 - **[DEBUG-LOGGING-GUIDE.md](docs/DEBUG-LOGGING-GUIDE.md)** - Enable debug logging for troubleshooting
 - **[TROUBLESHOOTING-CA-CERT.md](docs/TROUBLESHOOTING-CA-CERT.md)** - Troubleshoot certificate validation issues
 

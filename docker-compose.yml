@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  # IBM MQ Server
+  ibmmq:
+    image: icr.io/ibm-messaging/mq:latest
+    container_name: ibmmq-demo
+    ports:
+      - "1414:1414"
+      - "9443:9443"
+    environment:
+      - LICENSE=accept
+      - MQ_QMGR_NAME=QMDEMO
+      - MQ_APP_PASSWORD=passw0rd
+      - MQ_ADMIN_PASSWORD=passw0rd
+    volumes:
+      - qm-data:/mnt/mqm
+    networks:
+      - mq-network
+    healthcheck:
+      test: ["CMD", "dspmq"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # JMS Producer
+  jms-producer:
+    build:
+      context: ./jmsproducer
+      dockerfile: Dockerfile
+    container_name: jms-producer
+    depends_on:
+      ibmmq:
+        condition: service_healthy
+    environment:
+      - MQ_HOST=ibmmq
+      - MQ_PORT=1414
+      - MQ_QUEUE_MANAGER=QMDEMO
+      - MQ_CHANNEL=DEV.APP.SVRCONN
+      - MQ_QUEUE_NAME=DEV.QUEUE.1
+      - MQ_APP_NAME=DOCKER-PRODUCER
+      - MQ_APP_USERNAME=app
+      - MQ_APP_PASSWORD=passw0rd
+      - MQ_MESSAGE=Hello from Docker Compose!
+      - MQ_CONTINUOUS_MODE=true
+      - MQ_MESSAGE_COUNT=1000
+      - MQ_SEND_SLEEP_MILLIS=2000
+      - MQ_LOG_FREQUENCY=10
+    networks:
+      - mq-network
+    restart: unless-stopped
+
+  # JMS Consumer
+  jms-consumer:
+    build:
+      context: ./jmsconsumer
+      dockerfile: Dockerfile
+    container_name: jms-consumer
+    depends_on:
+      ibmmq:
+        condition: service_healthy
+    environment:
+      - MQ_HOST=ibmmq
+      - MQ_PORT=1414
+      - MQ_QUEUE_MANAGER=QMDEMO
+      - MQ_CHANNEL=DEV.APP.SVRCONN
+      - MQ_QUEUE_NAME=DEV.QUEUE.1
+      - MQ_APP_NAME=DOCKER-CONSUMER
+      - MQ_APP_USERNAME=app
+      - MQ_APP_PASSWORD=passw0rd
+      - MQ_RECEIVE_SLEEP_MILLIS=500
+      - MQ_RECEIVE_TIMEOUT_MILLIS=1000
+      - MQ_ENABLE_MESSAGE_COUNT=false
+    networks:
+      - mq-network
+    restart: unless-stopped
+
+networks:
+  mq-network:
+    driver: bridge
+
+volumes:
+  qm-data:
+
+# Made with Bob

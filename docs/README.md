@@ -4,7 +4,19 @@ This directory contains comprehensive guides for configuring and troubleshooting
 
 ## Quick Start
 
+- **[DOCKER-COMPOSE-GUIDE.md](DOCKER-COMPOSE-GUIDE.md)** - Run the complete stack locally with Docker Compose (recommended for beginners)
 - **[QUICK-START-CA-CERT.md](QUICK-START-CA-CERT.md)** - Get started quickly with CA certificate configuration
+
+## Getting Started
+
+### Local Development
+
+- **[DOCKER-COMPOSE-GUIDE.md](DOCKER-COMPOSE-GUIDE.md)** - Complete guide for running locally with Docker Compose
+  - Quick start with IBM MQ + Producer + Consumer
+  - Configuration examples and scenarios
+  - Troubleshooting common issues
+  - Performance tuning tips
+  - CI/CD integration examples
 
 ## Configuration Guides
 
@@ -71,8 +83,12 @@ This directory contains comprehensive guides for configuring and troubleshooting
 
 ### By Use Case
 
+#### "I want to run this locally on my laptop"
+→ Start with [DOCKER-COMPOSE-GUIDE.md](DOCKER-COMPOSE-GUIDE.md)
+→ Quick setup: `docker-compose up -d`
+
 #### "I want to use CA certificates directly"
-→ Start with [QUICK-START-CA-CERT.md](QUICK-START-CA-CERT.md)  
+→ Start with [QUICK-START-CA-CERT.md](QUICK-START-CA-CERT.md)
 → Detailed guide: [CA-CERTIFICATE-SETUP.md](CA-CERTIFICATE-SETUP.md)
 
 #### "I'm getting certificate validation errors"
@@ -94,9 +110,10 @@ This directory contains comprehensive guides for configuring and troubleshooting
 ## Recommended Reading Order
 
 ### For New Users
-1. [QUICK-START-CA-CERT.md](QUICK-START-CA-CERT.md) - Get started
-2. [CA-CERTIFICATE-SETUP.md](CA-CERTIFICATE-SETUP.md) - Understand the details
-3. [HOSTNAME-VERIFICATION.md](HOSTNAME-VERIFICATION.md) - Configure security
+1. [DOCKER-COMPOSE-GUIDE.md](DOCKER-COMPOSE-GUIDE.md) - Run locally first
+2. [QUICK-START-CA-CERT.md](QUICK-START-CA-CERT.md) - Get started with certificates
+3. [CA-CERTIFICATE-SETUP.md](CA-CERTIFICATE-SETUP.md) - Understand the details
+4. [HOSTNAME-VERIFICATION.md](HOSTNAME-VERIFICATION.md) - Configure security
 
 ### For Troubleshooting
 1. [TROUBLESHOOTING-CA-CERT.md](TROUBLESHOOTING-CA-CERT.md) - Diagnose issues
