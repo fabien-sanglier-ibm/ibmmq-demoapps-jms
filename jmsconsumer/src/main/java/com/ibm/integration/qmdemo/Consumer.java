@@ -173,26 +173,62 @@ public class Consumer {
 			Destination getFrom = session.createQueue(mqQueueName);
 			consumer = session.createConsumer(getFrom);
 			LOGGER.debug("JMS consumer created for queue {}", mqQueueName);
-
+		
 			int messageCount = 1;
 			connection.start();
-			LOGGER.info("Consumer started and waiting for messages");
+			if (enableMessageCount) {
+				LOGGER.info("Consumer started and waiting for messages (message counting enabled)");
+			} else {
+				LOGGER.info("Consumer started and waiting for messages");
+			}
 
 			while (running) {
 				LOGGER.debug("Waiting to receive message {}", Integer.valueOf(messageCount));
 				Message message = consumer.receive(receiveTimeoutMillis);
-
+				
 				if (message != null) {
-					LOGGER.info("Received message, count={}", Integer.valueOf(messageCount));
+					// Extract message properties if available
+					try {
+						if (message.propertyExists("MessageUUID")) {
+							String msgUUID = message.getStringProperty("MessageUUID");
+							long timestamp = message.propertyExists("Timestamp") ? message.getLongProperty("Timestamp") : 0;
+							
+							if (enableMessageCount) {
+								LOGGER.info("Received message, count={}, UUID={}, Timestamp={}",
+									Integer.valueOf(messageCount), msgUUID, Long.valueOf(timestamp));
+							} else {
+								LOGGER.info("Received message, UUID={}, Timestamp={}", msgUUID, Long.valueOf(timestamp));
+							}
+						} else {
+							if (enableMessageCount) {
+								LOGGER.info("Received message, count={}", Integer.valueOf(messageCount));
+							} else {
+								LOGGER.info("Received message");
+							}
+						}
+					} catch (JMSException e) {
+						LOGGER.warn("Could not read message properties", e);
+						if (enableMessageCount) {
+							LOGGER.info("Received message, count={}", Integer.valueOf(messageCount));
+						} else {
+							LOGGER.info("Received message");
+						}
+					}
 					LOGGER.debug("Received JMS message type={}", message.getClass().getName());
-					messageCount++;
+					if (enableMessageCount) {
+						messageCount++;
+					}
 					Thread.sleep(receiveSleepMillis);
 				} else {
 					LOGGER.debug("No message received within timeout, checking if still running");
 				}
 			}
 
-			LOGGER.info("Consumer stopped gracefully after processing {} messages", Integer.valueOf(messageCount - 1));
+			if (enableMessageCount) {
+				LOGGER.info("Consumer stopped gracefully after processing {} messages", Integer.valueOf(messageCount - 1));
+			} else {
+				LOGGER.info("Consumer stopped gracefully");
+			}
 
 		} catch (JMSException e) {
 			LOGGER.error("JMS error occurred in consumer", e);

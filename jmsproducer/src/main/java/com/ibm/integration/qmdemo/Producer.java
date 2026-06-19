@@ -180,19 +180,31 @@ public class Producer {
 
 			if (continuousMode) {
 				LOGGER.info("Starting message send loop in CONTINUOUS mode (will run indefinitely)");
-				int messagesSent = 0;
+				int messagesSinceLastLog = 0;  // Reset counter after each log - no overflow risk
 				while (true) {
-					messagesSent++;
-					LOGGER.debug("Sending message iteration {}", Integer.valueOf(messagesSent));
+					messagesSinceLastLog++;
+					
+					// Set message properties for tracking (no cumulative counter)
+					message.setStringProperty("MessageUUID", java.util.UUID.randomUUID().toString());
+					message.setLongProperty("Timestamp", System.currentTimeMillis());
+					
+					LOGGER.debug("Sending message with UUID");
 					producer.send(message);
-					if (messagesSent % logFrequency == 0) {
-						LOGGER.info("Sent {} messages (continuous mode)", Integer.valueOf(messagesSent));
+					
+					// Log and reset counter periodically
+					if (messagesSinceLastLog >= logFrequency) {
+						LOGGER.info("Sent {} messages since last log (continuous mode)", Integer.valueOf(messagesSinceLastLog));
+						messagesSinceLastLog = 0;  // Reset counter - prevents overflow
 					}
 					Thread.sleep(sendSleepMillis);
 				}
 			} else {
 				LOGGER.info("Starting message send loop for {} messages", Integer.valueOf(messageCount));
 				for (int i = 0; i < messageCount; i++) {
+					// Set message properties for tracking
+					message.setStringProperty("MessageUUID", java.util.UUID.randomUUID().toString());
+					message.setLongProperty("Timestamp", System.currentTimeMillis());
+					
 					LOGGER.debug("Sending message iteration {}", Integer.valueOf(i + 1));
 					producer.send(message);
 					if ((i + 1) % logFrequency == 0 || i + 1 == messageCount) {

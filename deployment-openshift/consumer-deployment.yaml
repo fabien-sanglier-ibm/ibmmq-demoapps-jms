@@ -42,6 +42,8 @@ spec:
               value: "500"
             - name: MQ_RECEIVE_TIMEOUT_MILLIS
               value: "1000"
+            - name: MQ_ENABLE_MESSAGE_COUNT
+              value: "false"
             - name: MQ_APP_PASSWORD
               valueFrom:
                 secretKeyRef:
