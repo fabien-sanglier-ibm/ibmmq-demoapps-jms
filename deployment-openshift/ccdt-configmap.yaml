@@ -1,0 +1,102 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mq-ccdt-config
+  labels:
+    app.kubernetes.io/name: mq-ccdt-config
+    app.kubernetes.io/component: messaging
+    app.kubernetes.io/part-of: ibmmq-jms-demo
+data:
+  ccdt.json: |
+    {
+      "channel": [
+        {
+          "name": "DEV.APP.SVRCONN.0TLS",
+          "clientConnection": {
+            "connection": [
+              {
+                "host": "qm1-ibm-mq.mq-namespace.svc.cluster.local",
+                "port": 1414
+              }
+            ],
+            "queueManager": "QM1"
+          },
+          "transmissionSecurity": {
+            "cipherSpecification": "TLS_RSA_WITH_AES_128_CBC_SHA256"
+          },
+          "type": "clientConnection"
+        },
+        {
+          "name": "DEV.APP.SVRCONN.0TLS",
+          "clientConnection": {
+            "connection": [
+              {
+                "host": "qm2-ibm-mq.mq-namespace.svc.cluster.local",
+                "port": 1414
+              }
+            ],
+            "queueManager": "QM2"
+          },
+          "transmissionSecurity": {
+            "cipherSpecification": "TLS_RSA_WITH_AES_128_CBC_SHA256"
+          },
+          "type": "clientConnection"
+        },
+        {
+          "name": "DEV.APP.SVRCONN.0TLS",
+          "clientConnection": {
+            "connection": [
+              {
+                "host": "qm3-ibm-mq.mq-namespace.svc.cluster.local",
+                "port": 1414
+              }
+            ],
+            "queueManager": "QM3"
+          },
+          "transmissionSecurity": {
+            "cipherSpecification": "TLS_RSA_WITH_AES_128_CBC_SHA256"
+          },
+          "type": "clientConnection"
+        }
+      ]
+    }
+
+---
+# Example: Multi-instance Queue Manager CCDT
+# Uncomment and modify for multi-instance QM setup
+# apiVersion: v1
+# kind: ConfigMap
+# metadata:
+#   name: mq-ccdt-multi-instance
+#   labels:
+#     app.kubernetes.io/name: mq-ccdt-config
+#     app.kubernetes.io/component: messaging
+#     app.kubernetes.io/part-of: ibmmq-jms-demo
+# data:
+#   ccdt.json: |
+#     {
+#       "channel": [
+#         {
+#           "name": "DEV.APP.SVRCONN.0TLS",
+#           "clientConnection": {
+#             "connection": [
+#               {
+#                 "host": "qm-primary.mq-namespace.svc.cluster.local",
+#                 "port": 1414
+#               },
+#               {
+#                 "host": "qm-standby.mq-namespace.svc.cluster.local",
+#                 "port": 1414
+#               }
+#             ],
+#             "queueManager": "QMDEMO"
+#           },
+#           "transmissionSecurity": {
+#             "cipherSpecification": "TLS_RSA_WITH_AES_128_CBC_SHA256"
+#           },
+#           "type": "clientConnection"
+#         }
+#       ]
+#     }
+
+# Made with Bob

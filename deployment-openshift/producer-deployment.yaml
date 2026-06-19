@@ -24,6 +24,19 @@ spec:
           image: ghcr.io/fabien-sanglier-ibm/ibmmq-demoapps-jms/jmsproducer:latest
           imagePullPolicy: Always
           env:
+            # CCDT Configuration (for uniform cluster or multi-instance QM)
+            # When using CCDT, only MQ_CCDT_URL is required - all other connection details come from CCDT
+            # Uncomment to use CCDT instead of direct connection
+            # - name: MQ_CCDT_URL
+            #   value: "file:///etc/mq/ccdt.json"
+            # Optional overrides (if not set, values from CCDT file are used):
+            # - name: MQ_QUEUE_MANAGER
+            #   value: "*"  # Use * for uniform cluster
+            # - name: MQ_CHANNEL
+            #   value: "SYSTEM.DEF.SVRCONN"
+            
+            # Standard Connection (single queue manager)
+            # These are ignored when MQ_CCDT_URL is set
             - name: MQ_HOST
               value: qmdemo-ibm-mq
             - name: MQ_PORT
@@ -111,6 +124,10 @@ spec:
           #   - name: tls-certs
           #     mountPath: /etc/ssl/certs
           #     readOnly: true
+          #   # Uncomment below to mount CCDT file from ConfigMap
+          #   - name: ccdt-config
+          #     mountPath: /etc/mq
+          #     readOnly: true
           resources:
             requests:
               cpu: 100m
@@ -137,6 +154,13 @@ spec:
       #         # Uncomment below for mTLS (client certificate authentication)
       #         # - key: client-keystore.jks
       #         #   path: client-keystore.jks
+      #   # Uncomment below to mount CCDT file from ConfigMap
+      #   - name: ccdt-config
+      #     configMap:
+      #       name: mq-ccdt-config
+      #       items:
+      #         - key: ccdt.json
+      #           path: ccdt.json
       restartPolicy: Always
 
 # Made with Bob

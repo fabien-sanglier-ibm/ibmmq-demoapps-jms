@@ -24,6 +24,10 @@ public class Producer {
 
 		try {
 			// Load and validate configuration
+			String mqCcdtUrl = System.getenv("MQ_CCDT_URL");
+			boolean usingCcdt = (mqCcdtUrl != null && !mqCcdtUrl.isEmpty());
+			
+			// Host, port, queue manager, and channel are only required when NOT using CCDT
 			String mqHost = getEnvOrDefault("MQ_HOST", "qmdemo-ibm-mq");
 			int mqPort = parseIntWithValidation("MQ_PORT", getEnvOrDefault("MQ_PORT", "1414"), 1, 65535);
 			String mqQueueManager = getEnvOrDefault("MQ_QUEUE_MANAGER", "QMDEMO");
@@ -78,8 +82,21 @@ public class Producer {
 			MQConnectionFactory connectionFactory = new MQConnectionFactory();
 
 			LOGGER.debug("Configuring MQ connection factory");
-			connectionFactory.setHostName(mqHost);
-			connectionFactory.setPort(mqPort);
+			
+			// Check if CCDT URL is provided (for uniform cluster or multi-instance QM)
+			if (usingCcdt) {
+				LOGGER.info("Using CCDT configuration from: {}", mqCcdtUrl);
+				connectionFactory.setCCDTURL(mqCcdtUrl);
+				LOGGER.debug("CCDT URL configured - all connection details will be read from CCDT file");
+			} else {
+				// Traditional connection using host, port, queue manager, and channel
+				connectionFactory.setHostName(mqHost);
+				connectionFactory.setPort(mqPort);
+				connectionFactory.setQueueManager(mqQueueManager);
+				connectionFactory.setChannel(mqChannel);
+				LOGGER.debug("Using direct connection to {}:{} with queue manager: {}, channel: {}",
+					mqHost, Integer.valueOf(mqPort), mqQueueManager, mqChannel);
+			}
 
 			// Configure TLS/mTLS if cipher suite is provided
 			if (mqCipherSuite != null && !mqCipherSuite.isEmpty()) {
@@ -135,21 +152,27 @@ public class Producer {
 						mqSslPeerNameEnabled, mqSslHostnameVerificationEnabled);
 			}
 
-			connectionFactory.setQueueManager(mqQueueManager);
-			connectionFactory.setChannel(mqChannel);
 			connectionFactory.setTransportType(WMQConstants.WMQ_CM_CLIENT);
 			connectionFactory.setAppName(mqAppName);
 			connectionFactory.setClientReconnectOptions(WMQConstants.WMQ_CLIENT_RECONNECT);
 
-			LOGGER.info(
-					"MQ connection configuration prepared for host={}, port={}, queueManager={}, channel={}, queue={}, appName={}, tlsCipherSuite={}",
-					mqHost,
-					Integer.valueOf(mqPort),
-					mqQueueManager,
-					mqChannel,
-					mqQueueName,
-					mqAppName,
-					mqCipherSuite != null && !mqCipherSuite.isEmpty() ? mqCipherSuite : "<not set>");
+			if (usingCcdt) {
+				LOGGER.info(
+						"MQ connection configuration prepared using CCDT: queue={}, appName={}, tlsCipherSuite={}",
+						mqQueueName,
+						mqAppName,
+						mqCipherSuite != null && !mqCipherSuite.isEmpty() ? mqCipherSuite : "<not set>");
+			} else {
+				LOGGER.info(
+						"MQ connection configuration prepared for host={}, port={}, queueManager={}, channel={}, queue={}, appName={}, tlsCipherSuite={}",
+						mqHost,
+						Integer.valueOf(mqPort),
+						mqQueueManager,
+						mqChannel,
+						mqQueueName,
+						mqAppName,
+						mqCipherSuite != null && !mqCipherSuite.isEmpty() ? mqCipherSuite : "<not set>");
+			}
 			LOGGER.debug(
 					"Producer send loop configured with continuousMode={}, messageCount={}, sendSleepMillis={} ms, logFrequency={}",
 					Boolean.valueOf(continuousMode),

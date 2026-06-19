@@ -8,6 +8,7 @@ ArgoCD-ready deployment manifests for IBM MQ JMS Producer and Consumer applicati
 - **`secret.yaml`** - MQ client authentication secret
 - **`producer-deployment.yaml`** - JMS Producer deployment
 - **`consumer-deployment.yaml`** - JMS Consumer deployment
+- **`ccdt-configmap.yaml`** - CCDT configuration for uniform clusters (optional)
 
 ## Prerequisites
 
@@ -77,9 +78,10 @@ spec:
 Both deployments can be customized via environment variables:
 
 #### Common Variables
-- `MQ_HOST` - MQ host (default: `qmdemo-ibm-mq`)
-- `MQ_PORT` - MQ port (default: `1414`)
-- `MQ_QUEUE_MANAGER` - Queue manager name (default: `QMDEMO`)
+- `MQ_CCDT_URL` - CCDT file URL for uniform cluster (optional, e.g., `file:///etc/mq/ccdt.json`)
+- `MQ_HOST` - MQ host (default: `qmdemo-ibm-mq`, ignored if CCDT is used)
+- `MQ_PORT` - MQ port (default: `1414`, ignored if CCDT is used)
+- `MQ_QUEUE_MANAGER` - Queue manager name (default: `QMDEMO`, use `*` for uniform cluster)
 - `MQ_CHANNEL` - Server connection channel (default: `DEV.APP.SVRCONN.0TLS`)
 - `MQ_QUEUE_NAME` - Queue name (default: `DEV.QUEUE.1`)
 - `MQ_APP_USERNAME` - Application username (default: `app`)
@@ -122,6 +124,87 @@ images:
   - name: ghcr.io/fabien-sanglier-ibm/ibmmq-demoapps-jms/jmsconsumer
     newTag: 1.0.0  # Use specific version
 ```
+
+## CCDT Configuration (Uniform Cluster)
+
+For uniform clusters or multi-instance queue managers, use CCDT (Client Channel Definition Table) instead of direct host/port configuration.
+
+### Step 1: Create CCDT ConfigMap
+
+Edit `ccdt-configmap.yaml` with your queue manager endpoints:
+
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mq-ccdt-config
+data:
+  ccdt.json: |
+    {
+      "channel": [
+        {
+          "name": "DEV.APP.SVRCONN.0TLS",
+          "clientConnection": {
+            "connection": [
+              {
+                "host": "qm1-ibm-mq.mq-namespace.svc.cluster.local",
+                "port": 1414
+              }
+            ],
+            "queueManager": "QM1"
+          },
+          "transmissionSecurity": {
+            "cipherSpecification": "TLS_RSA_WITH_AES_128_CBC_SHA256"
+          },
+          "type": "clientConnection"
+        }
+      ]
+    }
+```
+
+Apply the ConfigMap:
+
+```bash
+kubectl apply -f deployment-openshift/ccdt-configmap.yaml
+```
+
+### Step 2: Enable CCDT in Deployments
+
+In both `producer-deployment.yaml` and `consumer-deployment.yaml`, uncomment the CCDT configuration:
+
+```yaml
+env:
+  # CCDT Configuration
+  - name: MQ_CCDT_URL
+    value: "file:///etc/mq/ccdt.json"
+  - name: MQ_QUEUE_MANAGER
+    value: "*"  # Use * for uniform cluster
+```
+
+And uncomment the volume mounts:
+
+```yaml
+volumeMounts:
+  - name: ccdt-config
+    mountPath: /etc/mq
+    readOnly: true
+
+volumes:
+  - name: ccdt-config
+    configMap:
+      name: mq-ccdt-config
+      items:
+        - key: ccdt.json
+          path: ccdt.json
+```
+
+### Step 3: Deploy
+
+```bash
+kubectl apply -k deployment-openshift/
+```
+
+For detailed CCDT configuration options, see [CCDT-CONFIGURATION.md](../docs/CCDT-CONFIGURATION.md).
 
 ## Image Pull Secrets (for Private Repos)
 

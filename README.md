@@ -62,10 +62,11 @@ Both applications are configured via environment variables:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `MQ_HOST` | MQ host name | `qmdemo-ibm-mq` |
-| `MQ_PORT` | MQ port number (1-65535) | `1414` |
-| `MQ_QUEUE_MANAGER` | Queue manager name | `QMDEMO` |
-| `MQ_CHANNEL` | Server connection channel | `DEV.APP.SVRCONN.0TLS` |
+| `MQ_CCDT_URL` | CCDT file URL for uniform cluster/multi-instance QM (optional) | - |
+| `MQ_HOST` | MQ host name (ignored if CCDT is used) | `qmdemo-ibm-mq` |
+| `MQ_PORT` | MQ port number (1-65535, ignored if CCDT is used) | `1414` |
+| `MQ_QUEUE_MANAGER` | Queue manager name (optional if CCDT is used) | `QMDEMO` |
+| `MQ_CHANNEL` | Server connection channel (optional if CCDT is used) | `DEV.APP.SVRCONN.0TLS` |
 | `MQ_QUEUE_NAME` | Queue name | `DEV.QUEUE.1` |
 | `MQ_APP_USERNAME` | Application username | `app` |
 | `MQ_APP_PASSWORD` | Application password (required unless using mTLS) | - |
@@ -465,8 +466,10 @@ Detailed guides are available in the `docs/` directory:
 ### Getting Started
 - **[DOCKER-COMPOSE-GUIDE.md](docs/DOCKER-COMPOSE-GUIDE.md)** - Complete guide for local development with Docker Compose
 - **[QUICK-START-CA-CERT.md](docs/QUICK-START-CA-CERT.md)** - Quick start guide for CA certificate configuration
+- **[CCDT-CONFIGURATION.md](docs/CCDT-CONFIGURATION.md)** - Using CCDT for uniform clusters and automatic failover
 
 ### SSL/TLS Configuration
+- **[CA-CERT-VS-JKS-TRUSTSTORE.md](docs/CA-CERT-VS-JKS-TRUSTSTORE.md)** - CA Certificate vs JKS Truststore comparison (start here!)
 - **[CA-CERTIFICATE-SETUP.md](docs/CA-CERTIFICATE-SETUP.md)** - Complete guide for using CA certificates directly (recommended)
 - **[JAVA-SSL-PROPERTIES.md](docs/JAVA-SSL-PROPERTIES.md)** - Using JAVA_TOOL_OPTIONS for SSL configuration
 - **[SECURE-PASSWORD-OPTIONS.md](docs/SECURE-PASSWORD-OPTIONS.md)** - Secure password management strategies
