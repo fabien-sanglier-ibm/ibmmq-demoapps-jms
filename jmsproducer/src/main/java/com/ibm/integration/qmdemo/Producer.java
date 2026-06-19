@@ -88,7 +88,7 @@ public class Producer {
 			// Check if CCDT URL is provided (for uniform cluster or multi-instance QM)
 			if (usingCcdt) {
 				LOGGER.info("Using CCDT configuration from: {}", mqCcdtUrl);
-				connectionFactory.setCCDTURL(mqCcdtUrl);
+				connectionFactory.setCCDTURL(new java.net.URL(mqCcdtUrl));
 				LOGGER.debug("CCDT URL configured - all connection details will be read from CCDT file");
 			} else {
 				// Traditional connection using host, port, queue manager, and channel
