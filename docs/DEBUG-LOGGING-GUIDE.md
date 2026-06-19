@@ -4,6 +4,16 @@ This guide explains how to enable debug logging to troubleshoot SSL/TLS and IBM 
 
 ## Quick Reference
 
+### Enable Application DEBUG Logging (SLF4J)
+
+Uncomment this in your deployment YAML to see detailed application logs:
+
+```yaml
+env:
+  - name: JAVA_TOOL_OPTIONS
+    value: "-Dorg.slf4j.simpleLogger.defaultLogLevel=debug"
+```
+
 ### Enable SSL Debug Logging
 
 Uncomment this in your deployment YAML:
@@ -12,6 +22,16 @@ Uncomment this in your deployment YAML:
 env:
   - name: JAVA_TOOL_OPTIONS
     value: "-Djavax.net.debug=ssl:handshake:verbose"
+```
+
+### Enable Both Application and SSL Debug
+
+Combine both for comprehensive debugging:
+
+```yaml
+env:
+  - name: JAVA_TOOL_OPTIONS
+    value: "-Dorg.slf4j.simpleLogger.defaultLogLevel=debug -Djavax.net.debug=ssl:handshake:verbose"
 ```
 
 Then restart:
@@ -30,7 +50,53 @@ kubectl logs -f deployment/jms-producer
 
 ## Debug Logging Options
 
-### Option 1: SSL Handshake Debug (Recommended for Certificate Issues)
+### Option 1: Application DEBUG Logging (SLF4J)
+
+**Use when:** You need detailed application-level logging
+
+**Configuration:**
+```yaml
+env:
+  - name: JAVA_TOOL_OPTIONS
+    value: "-Dorg.slf4j.simpleLogger.defaultLogLevel=debug"
+```
+
+**What you'll see:**
+- Detailed configuration loading
+- Connection establishment steps
+- Message processing details
+- Resource cleanup operations
+- All DEBUG level log statements in the application
+
+**Example output:**
+```
+[main] DEBUG com.ibm.integration.qmdemo.Consumer - Resolved MQ environment configuration for consumer startup
+[main] DEBUG com.ibm.integration.qmdemo.Consumer - Configuring MQ connection factory
+[main] DEBUG com.ibm.integration.qmdemo.Consumer - TLS cipher suite configured: TLS_RSA_WITH_AES_128_CBC_SHA256
+[main] DEBUG com.ibm.integration.qmdemo.Consumer - SSL CA certificate path configured: /etc/ssl/certs/ca.crt
+[main] DEBUG com.ibm.integration.qmdemo.Consumer - SSL hostname verification enabled
+[main] DEBUG com.ibm.integration.qmdemo.Consumer - MQ connection created successfully using username/password
+[main] DEBUG com.ibm.integration.qmdemo.Consumer - Creating JMS session
+[main] DEBUG com.ibm.integration.qmdemo.Consumer - JMS consumer created for queue DEV.QUEUE.1
+[main] DEBUG com.ibm.integration.qmdemo.Consumer - Waiting to receive message 1
+```
+
+**Available log levels:**
+- `trace` - Most verbose
+- `debug` - Detailed debugging
+- `info` - Informational (default)
+- `warn` - Warnings
+- `error` - Errors only
+
+**Set specific log level:**
+```yaml
+- name: JAVA_TOOL_OPTIONS
+  value: "-Dorg.slf4j.simpleLogger.defaultLogLevel=trace"
+```
+
+---
+
+### Option 2: SSL Handshake Debug (Recommended for Certificate Issues)
 
 **Use when:** You have SSL/TLS certificate validation errors
 
@@ -74,7 +140,7 @@ Found trusted certificate:
 
 ---
 
-### Option 2: All SSL Debug (Very Verbose)
+### Option 3: All SSL Debug (Very Verbose)
 
 **Use when:** You need complete SSL/TLS details
 
@@ -96,7 +162,7 @@ env:
 
 ---
 
-### Option 3: Specific SSL Categories
+### Option 4: Specific SSL Categories
 
 **Use when:** You want to focus on specific aspects
 
@@ -137,7 +203,36 @@ env:
 
 ---
 
-### Option 4: IBM MQ Trace (For MQ-Specific Issues)
+### Option 5: Combine Application and SSL Debug
+
+**Use when:** You need both application logic and SSL details
+
+**Configuration:**
+```yaml
+env:
+  - name: JAVA_TOOL_OPTIONS
+    value: "-Dorg.slf4j.simpleLogger.defaultLogLevel=debug -Djavax.net.debug=ssl:handshake:verbose"
+```
+
+**What you'll see:**
+- Application DEBUG logs
+- SSL/TLS handshake details
+- Certificate validation
+- Complete troubleshooting picture
+
+**Example:**
+```
+[main] DEBUG com.ibm.integration.qmdemo.Consumer - Configuring MQ connection factory
+[main] DEBUG com.ibm.integration.qmdemo.Consumer - TLS cipher suite configured: TLS_RSA_WITH_AES_128_CBC_SHA256
+*** ClientHello, TLSv1.2
+*** ServerHello, TLSv1.2
+*** Certificate chain
+[main] DEBUG com.ibm.integration.qmdemo.Consumer - MQ connection created successfully
+```
+
+---
+
+### Option 6: IBM MQ Trace (For MQ-Specific Issues)
 
 **Use when:** You have IBM MQ connection or protocol issues
 
@@ -178,8 +273,27 @@ kubectl cp deployment/jms-consumer:/tmp/mqjms_PID.trc ./mqjms.trc
 
 ## Combining Debug Options
 
-You can combine SSL debug with MQ trace:
+You can combine multiple debug options:
 
+### Application + SSL Debug
+```yaml
+env:
+  - name: JAVA_TOOL_OPTIONS
+    value: "-Dorg.slf4j.simpleLogger.defaultLogLevel=debug -Djavax.net.debug=ssl:handshake:verbose"
+```
+
+### Application + SSL + MQ Trace
+```yaml
+env:
+  - name: JAVA_TOOL_OPTIONS
+    value: "-Dorg.slf4j.simpleLogger.defaultLogLevel=debug -Djavax.net.debug=ssl:handshake:verbose"
+  - name: MQJMS_TRACE_LEVEL
+    value: "5"
+  - name: MQJMS_TRACE_DIR
+    value: "/tmp"
+```
+
+### SSL Debug + MQ Trace (without application DEBUG)
 ```yaml
 env:
   - name: JAVA_TOOL_OPTIONS
@@ -194,7 +308,29 @@ env:
 
 ## Practical Examples
 
-### Example 1: Troubleshoot Certificate Validation
+### Example 1: Troubleshoot Application Configuration
+
+**Problem:** Application not connecting, need to see configuration details
+
+**Enable debug:**
+```yaml
+env:
+  - name: JAVA_TOOL_OPTIONS
+    value: "-Dorg.slf4j.simpleLogger.defaultLogLevel=debug"
+```
+
+**What to look for in logs:**
+```
+DEBUG com.ibm.integration.qmdemo.Consumer - Resolved MQ environment configuration
+DEBUG com.ibm.integration.qmdemo.Consumer - Configuring MQ connection factory
+DEBUG com.ibm.integration.qmdemo.Consumer - TLS cipher suite configured: TLS_RSA_WITH_AES_128_CBC_SHA256
+```
+
+**Solution:** Verify all configuration values are correct.
+
+---
+
+### Example 2: Troubleshoot Certificate Validation
 
 **Problem:** `unable to find valid certification path to requested target`
 
@@ -202,7 +338,7 @@ env:
 ```yaml
 env:
   - name: JAVA_TOOL_OPTIONS
-    value: "-Djavax.net.debug=trustmanager,handshake"
+    value: "-Dorg.slf4j.simpleLogger.defaultLogLevel=debug -Djavax.net.debug=trustmanager,handshake"
 ```
 
 **What to look for in logs:**
@@ -228,7 +364,7 @@ PKIX path building failed
 
 ---
 
-### Example 2: Troubleshoot Cipher Suite Mismatch
+### Example 3: Troubleshoot Cipher Suite Mismatch
 
 **Problem:** SSL handshake fails with cipher suite error
 
@@ -252,7 +388,7 @@ Cipher Suite: TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384  <-- Server chose different 
 
 ---
 
-### Example 3: Troubleshoot Connection Issues
+### Example 4: Troubleshoot Connection Issues
 
 **Problem:** Connection refused or timeout
 
@@ -279,18 +415,26 @@ Connection refused / timeout
 
 ## Step-by-Step Troubleshooting Process
 
-### Step 1: Enable SSL Debug
+### Step 1: Enable Debug Logging
 
+**For application issues:**
 ```bash
 # Edit deployment
 kubectl edit deployment jms-consumer
 
 # Add under env:
 - name: JAVA_TOOL_OPTIONS
-  value: "-Djavax.net.debug=ssl:handshake:verbose"
+  value: "-Dorg.slf4j.simpleLogger.defaultLogLevel=debug"
 
 # Or apply updated YAML
 kubectl apply -f deployment-openshift/consumer-deployment.yaml
+```
+
+**For SSL/certificate issues:**
+```bash
+# Add under env:
+- name: JAVA_TOOL_OPTIONS
+  value: "-Dorg.slf4j.simpleLogger.defaultLogLevel=debug -Djavax.net.debug=ssl:handshake:verbose"
 ```
 
 ### Step 2: Restart Deployment
@@ -307,7 +451,13 @@ kubectl logs -f deployment/jms-consumer
 
 ### Step 4: Analyze Output
 
-Look for:
+**Application logs - look for:**
+- Configuration values being loaded
+- Connection establishment steps
+- Certificate loading messages
+- Error messages with context
+
+**SSL logs - look for:**
 - Certificate chain presented by server
 - Trusted certificates in your truststore
 - Certificate validation errors
