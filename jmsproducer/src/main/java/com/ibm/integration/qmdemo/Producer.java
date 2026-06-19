@@ -36,6 +36,7 @@ public class Producer {
         		String mqSslKeyStorePassword = System.getenv("MQ_SSL_KEYSTORE_PASSWORD");
         		String mqSslTrustStore = System.getenv("MQ_SSL_TRUSTSTORE_PATH");
         		String mqSslTrustStorePassword = System.getenv("MQ_SSL_TRUSTSTORE_PASSWORD");
+        		String mqSslCaCertPath = System.getenv("MQ_SSL_CA_CERT_PATH");
         		boolean mqSslPeerNameEnabled = Boolean.parseBoolean(getEnvOrDefault("MQ_SSL_PEER_NAME_ENABLED", "true"));
         		String mqMessage = getEnvOrDefault("MQ_MESSAGE", "Test some data here");
         		boolean continuousMode = Boolean.parseBoolean(getEnvOrDefault("MQ_CONTINUOUS_MODE", "true"));
@@ -91,6 +92,7 @@ public class Producer {
                         	}
                         	
                         	// Configure truststore for server certificate validation
+                        	// Option 1: Use JKS truststore (traditional approach)
                         	if (mqSslTrustStore != null && !mqSslTrustStore.isEmpty()) {
                         		System.setProperty("javax.net.ssl.trustStore", mqSslTrustStore);
                         		LOGGER.debug("SSL truststore path configured: {}", mqSslTrustStore);
@@ -99,6 +101,11 @@ public class Producer {
                         			System.setProperty("javax.net.ssl.trustStorePassword", mqSslTrustStorePassword);
                         			LOGGER.debug("SSL truststore password configured");
                         		}
+                        	}
+                        	// Option 2: Use CA certificate directly (PEM format)
+                        	else if (mqSslCaCertPath != null && !mqSslCaCertPath.isEmpty()) {
+                        		configureCaCertificate(mqSslCaCertPath);
+                        		LOGGER.debug("SSL CA certificate path configured: {}", mqSslCaCertPath);
                         	}
                         	
                         	// Configure peer name verification
@@ -246,6 +253,41 @@ public class Producer {
         		} catch (Exception e) {
         			LOGGER.warn("Failed to close {}", resourceName, e);
         		}
+        	}
+        }
+        
+        /**
+        	* Configure SSL to trust a CA certificate from a PEM file.
+        	* This creates an in-memory truststore from the CA certificate.
+        	*/
+        private static void configureCaCertificate(String caCertPath) {
+        	try {
+        		// Read the CA certificate from PEM file
+        		java.io.FileInputStream fis = new java.io.FileInputStream(caCertPath);
+        		java.security.cert.CertificateFactory cf = java.security.cert.CertificateFactory.getInstance("X.509");
+        		java.security.cert.X509Certificate caCert = (java.security.cert.X509Certificate) cf.generateCertificate(fis);
+        		fis.close();
+        		
+        		// Create a KeyStore containing the CA certificate
+        		java.security.KeyStore keyStore = java.security.KeyStore.getInstance(java.security.KeyStore.getDefaultType());
+        		keyStore.load(null, null);
+        		keyStore.setCertificateEntry("ca-cert", caCert);
+        		
+        		// Create a TrustManager that trusts the CA certificate
+        		javax.net.ssl.TrustManagerFactory tmf = javax.net.ssl.TrustManagerFactory.getInstance(
+        			javax.net.ssl.TrustManagerFactory.getDefaultAlgorithm());
+        		tmf.init(keyStore);
+        		
+        		// Create an SSLContext with the TrustManager
+        		javax.net.ssl.SSLContext sslContext = javax.net.ssl.SSLContext.getInstance("TLS");
+        		sslContext.init(null, tmf.getTrustManagers(), new java.security.SecureRandom());
+        		
+        		// Set as default SSL context
+        		javax.net.ssl.SSLContext.setDefault(sslContext);
+        		
+        		LOGGER.info("Successfully configured CA certificate from: {}", caCertPath);
+        	} catch (Exception e) {
+        		throw new RuntimeException("Failed to configure CA certificate from: " + caCertPath, e);
         	}
         }
        }

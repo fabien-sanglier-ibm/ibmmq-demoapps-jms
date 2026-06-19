@@ -48,6 +48,7 @@ spec:
                   name: mq-client-auth
                   key: password
             # Uncomment below for TLS/mTLS configuration
+            # Option 1: Using JKS truststore (traditional approach)
             # - name: MQ_SSL_CIPHER_SUITE
             #   value: "TLS_RSA_WITH_AES_128_CBC_SHA256"
             # - name: MQ_SSL_KEYSTORE_PATH
@@ -64,6 +65,21 @@ spec:
             #     secretKeyRef:
             #       name: mq-tls-certs
             #       key: truststore-password
+            # - name: MQ_SSL_PEER_NAME_ENABLED
+            #   value: "true"
+            
+            # Option 2: Using CA certificate directly (PEM format)
+            # - name: MQ_SSL_CIPHER_SUITE
+            #   value: "TLS_RSA_WITH_AES_128_CBC_SHA256"
+            # - name: MQ_SSL_CA_CERT_PATH
+            #   value: "/etc/ssl/certs/ca.crt"
+            # - name: MQ_SSL_KEYSTORE_PATH
+            #   value: "/etc/ssl/certs/client-keystore.jks"
+            # - name: MQ_SSL_KEYSTORE_PASSWORD
+            #   valueFrom:
+            #     secretKeyRef:
+            #       name: mq-tls-certs
+            #       key: keystore-password
             # - name: MQ_SSL_PEER_NAME_ENABLED
             #   value: "true"
           # Uncomment below to mount TLS certificates from a secret
@@ -87,6 +103,7 @@ spec:
             seccompProfile:
               type: RuntimeDefault
       # Uncomment below to mount TLS certificates from a secret
+      # Option 1: Mount JKS files (traditional approach)
       # volumes:
       #   - name: tls-certs
       #     secret:
@@ -96,6 +113,17 @@ spec:
       #           path: client-keystore.jks
       #         - key: truststore.jks
       #           path: truststore.jks
+      
+      # Option 2: Mount CA certificate directly (PEM format)
+      # volumes:
+      #   - name: tls-certs
+      #     secret:
+      #       secretName: mq-tls-certs
+      #       items:
+      #         - key: ca.crt
+      #           path: ca.crt
+      #         - key: client-keystore.jks
+      #           path: client-keystore.jks
       restartPolicy: Always
 
 # Made with Bob
