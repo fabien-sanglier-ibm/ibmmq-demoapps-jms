@@ -29,12 +29,6 @@ spec:
             # Uncomment to use CCDT instead of direct connection
             # - name: MQ_CCDT_URL
             #   value: "file:///etc/mq/ccdt.json"
-            # Optional overrides (if not set, values from CCDT file are used):
-            # - name: MQ_QUEUE_MANAGER
-            #   value: "*"  # Use * for uniform cluster
-            # - name: MQ_CHANNEL
-            #   value: "SYSTEM.DEF.SVRCONN"
-            
             # Standard Connection (single queue manager)
             # These are ignored when MQ_CCDT_URL is set
             - name: MQ_HOST
