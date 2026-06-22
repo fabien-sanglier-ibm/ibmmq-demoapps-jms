@@ -35,15 +35,15 @@ public class Producer {
 			String mqAppName = getEnvOrDefault("MQ_APP_NAME", "MY-PRODUCER");
 			String mqQueueName = getEnvOrDefault("MQ_QUEUE_NAME", "DEV.QUEUE.1");
 			String mqUsername = getEnvOrDefault("MQ_APP_USERNAME", "app");
+			boolean mqTLSEnabled = Boolean.parseBoolean(getEnvOrDefault("MQ_TLS_ENABLED", "false"));
 			String mqCipherSuite = System.getenv("MQ_SSL_CIPHER_SUITE");
 			String mqSslKeyStore = System.getenv("MQ_SSL_KEYSTORE_PATH");
 			String mqSslKeyStorePassword = System.getenv("MQ_SSL_KEYSTORE_PASSWORD");
 			String mqSslTrustStore = System.getenv("MQ_SSL_TRUSTSTORE_PATH");
 			String mqSslTrustStorePassword = System.getenv("MQ_SSL_TRUSTSTORE_PASSWORD");
 			String mqSslCaCertPath = System.getenv("MQ_SSL_CA_CERT_PATH");
-			boolean mqSslPeerNameEnabled = Boolean.parseBoolean(getEnvOrDefault("MQ_SSL_PEER_NAME_ENABLED", "true"));
-			boolean mqSslHostnameVerificationEnabled = Boolean
-					.parseBoolean(getEnvOrDefault("MQ_SSL_HOSTNAME_VERIFICATION_ENABLED", "true"));
+			String mqSslPeerNameEnabledStr = System.getenv("MQ_SSL_PEER_NAME_ENABLED");
+			String mqSslHostnameVerificationEnabledStr = System.getenv("MQ_SSL_HOSTNAME_VERIFICATION_ENABLED");
 			String mqMessage = getEnvOrDefault("MQ_MESSAGE", "Test some data here");
 			boolean continuousMode = Boolean.parseBoolean(getEnvOrDefault("MQ_CONTINUOUS_MODE", "true"));
 			int messageCount = parseIntWithValidation("MQ_MESSAGE_COUNT", getEnvOrDefault("MQ_MESSAGE_COUNT", "4000"),
@@ -59,8 +59,7 @@ public class Producer {
 			LOGGER.debug("Resolved MQ environment configuration for producer startup");
 
 			// Check if mTLS is configured (client certificate authentication)
-			boolean isMtlsConfigured = (mqCipherSuite != null && !mqCipherSuite.isEmpty())
-					&& (mqSslKeyStore != null && !mqSslKeyStore.isEmpty());
+			boolean isMtlsConfigured = mqTLSEnabled && (mqSslKeyStore != null && !mqSslKeyStore.isEmpty());
 
 			// Check if password is provided
 			boolean hasPassword = (mqAppPassword != null && !mqAppPassword.isEmpty());
@@ -68,7 +67,7 @@ public class Producer {
 			// Password is required only if mTLS is not configured
 			if (!isMtlsConfigured && !hasPassword) {
 				throw new IllegalArgumentException(
-						"No environment variable supplied for password. Either provide MQ_APP_PASSWORD or configure mTLS with MQ_SSL_CIPHER_SUITE and MQ_SSL_KEYSTORE_PATH.");
+						"No environment variable supplied for password. Either provide MQ_APP_PASSWORD or configure mTLS with MQ_TLS_ENABLED=true and MQ_SSL_KEYSTORE_PATH.");
 			}
 
 			// Log authentication method
@@ -100,10 +99,15 @@ public class Producer {
 					mqHost, Integer.valueOf(mqPort), mqQueueManager, mqChannel);
 			}
 
-			// Configure TLS/mTLS if cipher suite is provided
-			if (mqCipherSuite != null && !mqCipherSuite.isEmpty()) {
-				connectionFactory.setSSLCipherSuite(mqCipherSuite);
-				LOGGER.debug("TLS cipher suite configured: {}", mqCipherSuite);
+			// Configure TLS/mTLS if TLS is enabled
+			if (mqTLSEnabled) {
+				// Set cipher suite if explicitly provided (optional when using CCDT)
+				if (mqCipherSuite != null && !mqCipherSuite.isEmpty()) {
+					connectionFactory.setSSLCipherSuite(mqCipherSuite);
+					LOGGER.debug("TLS cipher suite configured: {}", mqCipherSuite);
+				} else {
+					LOGGER.debug("TLS enabled but cipher suite not specified - will use CCDT configuration or defaults");
+				}
 
 				// Configure client certificate keystore for mTLS
 				if (mqSslKeyStore != null && !mqSslKeyStore.isEmpty()) {
@@ -134,24 +138,35 @@ public class Producer {
 					LOGGER.debug("SSL CA certificate path configured: {}", mqSslCaCertPath);
 				}
 
-				// Configure peer name verification
-				if (!mqSslPeerNameEnabled) {
-					connectionFactory.setSSLPeerName("*");
-					LOGGER.warn("SSL peer name verification disabled - not recommended for production");
-				}
-
-				// Configure hostname verification (certificate CN/SAN matching)
-				if (mqSslHostnameVerificationEnabled) {
-					connectionFactory.setTargetClientMatching(true);
-					LOGGER.debug("SSL hostname verification enabled (certificate CN/SAN will be validated)");
+				// Configure peer name verification only if explicitly set
+				if (mqSslPeerNameEnabledStr != null && !mqSslPeerNameEnabledStr.isEmpty()) {
+					boolean mqSslPeerNameEnabled = Boolean.parseBoolean(mqSslPeerNameEnabledStr);
+					if (!mqSslPeerNameEnabled) {
+						connectionFactory.setSSLPeerName("*");
+						LOGGER.warn("SSL peer name verification disabled - not recommended for production");
+					} else {
+						LOGGER.debug("SSL peer name verification enabled");
+					}
 				} else {
-					connectionFactory.setTargetClientMatching(false);
-					LOGGER.warn(
-							"SSL hostname verification disabled - certificate CN/SAN will not be validated - not recommended for production");
+					LOGGER.debug("SSL peer name verification not specified - will use CCDT configuration or defaults");
 				}
 
-				LOGGER.info("TLS configuration applied (peerNameEnabled={}, hostnameVerificationEnabled={})",
-						mqSslPeerNameEnabled, mqSslHostnameVerificationEnabled);
+				// Configure hostname verification (certificate CN/SAN matching) only if explicitly set
+				if (mqSslHostnameVerificationEnabledStr != null && !mqSslHostnameVerificationEnabledStr.isEmpty()) {
+					boolean mqSslHostnameVerificationEnabled = Boolean.parseBoolean(mqSslHostnameVerificationEnabledStr);
+					if (mqSslHostnameVerificationEnabled) {
+						connectionFactory.setTargetClientMatching(true);
+						LOGGER.debug("SSL hostname verification enabled (certificate CN/SAN will be validated)");
+					} else {
+						connectionFactory.setTargetClientMatching(false);
+						LOGGER.warn(
+								"SSL hostname verification disabled - certificate CN/SAN will not be validated - not recommended for production");
+					}
+				} else {
+					LOGGER.debug("SSL hostname verification not specified - will use CCDT configuration or defaults");
+				}
+
+				LOGGER.info("TLS configuration applied");
 			}
 
 			connectionFactory.setTransportType(WMQConstants.WMQ_CM_CLIENT);
