@@ -68,19 +68,17 @@ public class Consumer {
 			// Check if password is provided
 			boolean hasPassword = (mqAppPassword != null && !mqAppPassword.isEmpty());
 
-			// Password is required only if mTLS is not configured
-			if (!isMtlsConfigured && !hasPassword) {
-				throw new IllegalArgumentException(
-						"No environment variable supplied for password. Either provide MQ_APP_PASSWORD or configure mTLS with MQ_TLS_ENABLED=true and MQ_SSL_KEYSTORE_PATH.");
-			}
-
 			// Log authentication method
 			if (isMtlsConfigured && hasPassword) {
-				LOGGER.info("Using mTLS client certificate + username/password authentication");
+				LOGGER.info("Using TLS with mTLS client certificate + username/password authentication");
 			} else if (isMtlsConfigured) {
-				LOGGER.info("Using mTLS client certificate authentication only");
+				LOGGER.info("Using TLS with mTLS client certificate authentication only");
+			} else if (mqTLSEnabled && hasPassword) {
+				LOGGER.info("Using TLS with username/password authentication");
+			} else if (mqTLSEnabled) {
+				LOGGER.info("Using TLS without authentication (encryption only)");
 			} else if (hasPassword) {
-				LOGGER.info("Using username/password authentication");
+				LOGGER.info("Using username/password authentication without TLS");
 			}
 
 			// Configure MQ connection factory
