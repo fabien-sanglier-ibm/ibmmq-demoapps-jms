@@ -92,7 +92,8 @@ public class Consumer {
 			if (usingCcdt) {
 				LOGGER.info("Using CCDT configuration from: {}", mqCcdtUrl);
 				connectionFactory.setCCDTURL(new java.net.URL(mqCcdtUrl));
-				LOGGER.debug("CCDT URL configured - all connection details will be read from CCDT file");
+				connectionFactory.setQueueManager(mqQueueManager);
+				LOGGER.debug("CCDT URL configured with queue manager: {} - all connection details will be read from CCDT file", mqQueueManager);
 			} else {
 				// Traditional connection using host, port, queue manager, and channel
 				connectionFactory.setHostName(mqHost);
@@ -181,7 +182,8 @@ public class Consumer {
 
 			if (usingCcdt) {
 				LOGGER.info(
-						"MQ connection configuration prepared using CCDT: queue={}, appName={}, tlsCipherSuite={}",
+						"MQ connection configuration prepared using CCDT: queueManager={}, queue={}, appName={}, tlsCipherSuite={}",
+						mqQueueManager,
 						mqQueueName,
 						mqAppName,
 						mqCipherSuite != null && !mqCipherSuite.isEmpty() ? mqCipherSuite : "<not set>");
