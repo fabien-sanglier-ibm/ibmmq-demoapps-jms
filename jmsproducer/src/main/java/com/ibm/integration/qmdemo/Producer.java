@@ -32,7 +32,7 @@ public class Producer {
 			// Host, port, queue manager, and channel are only required when NOT using CCDT
 			String mqHost = getEnvOrDefault("MQ_HOST", "qmdemo-ibm-mq");
 			int mqPort = parseIntWithValidation("MQ_PORT", getEnvOrDefault("MQ_PORT", "1414"), 1, 65535);
-			String mqQueueManager = getEnvOrDefault("MQ_QUEUE_MANAGER", "QMDEMO");
+			String mqQueueManager = getEnvOrDefault("MQ_QUEUE_MANAGER", CONST_ANY_QM);
 			String mqChannel = getEnvOrDefault("MQ_CHANNEL", "DEV.APP.SVRCONN.0TLS");
 			String mqAppName = getEnvOrDefault("MQ_APP_NAME", "MY-PRODUCER");
 			String mqQueueName = getEnvOrDefault("MQ_QUEUE_NAME", "DEV.QUEUE.1");
