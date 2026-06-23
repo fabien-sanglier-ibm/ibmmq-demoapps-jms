@@ -88,9 +88,6 @@ public class Producer {
 			if (usingCcdt) {
 				LOGGER.info("Using CCDT configuration from: {}", mqCcdtUrl);
 				connectionFactory.setCCDTURL(new java.net.URL(mqCcdtUrl));
-
-				// with CCDT, forcing queue manager to *ANY_QM
-				mqQueueManager = Producer.CONST_ANY_QM;
 				connectionFactory.setQueueManager(mqQueueManager);
 				LOGGER.debug("CCDT URL configured with queue manager: {} - all connection details will be read from CCDT file", mqQueueManager);
 			} else {
