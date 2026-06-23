@@ -18,6 +18,8 @@ public class Consumer {
 	private static final Logger LOGGER = LoggerFactory.getLogger(Consumer.class);
 	private static volatile boolean running = true;
 
+	private static String CONST_ANY_QM = "*ANY_QM";
+	
 	public static void main(String[] args) {
 		Connection connection = null;
 		Session session = null;
@@ -57,7 +59,7 @@ public class Consumer {
 					getEnvOrDefault("MQ_RECEIVE_TIMEOUT_MILLIS", "1000"), 100, Long.MAX_VALUE);
 			boolean enableMessageCount = Boolean.parseBoolean(getEnvOrDefault("MQ_ENABLE_MESSAGE_COUNT", "false"));
 			int clientReconnectTimeout = parseIntWithValidation("MQ_CLIENT_RECONNECT_TIMEOUT",
-					getEnvOrDefault("MQ_CLIENT_RECONNECT_TIMEOUT", "300"), 0, Integer.MAX_VALUE);
+					getEnvOrDefault("MQ_CLIENT_RECONNECT_TIMEOUT", "180"), 0, Integer.MAX_VALUE);
 			String mqAppPassword = System.getenv("MQ_APP_PASSWORD");
 
 			LOGGER.debug("Resolved MQ environment configuration for consumer startup");
@@ -90,6 +92,9 @@ public class Consumer {
 			if (usingCcdt) {
 				LOGGER.info("Using CCDT configuration from: {}", mqCcdtUrl);
 				connectionFactory.setCCDTURL(new java.net.URL(mqCcdtUrl));
+				
+				// with CCDT, forcing queue manager to *ANY_QM
+				mqQueueManager = Consumer.CONST_ANY_QM;
 				connectionFactory.setQueueManager(mqQueueManager);
 				LOGGER.debug("CCDT URL configured with queue manager: {} - all connection details will be read from CCDT file", mqQueueManager);
 			} else {
@@ -177,6 +182,10 @@ public class Consumer {
 			connectionFactory.setClientReconnectOptions(WMQConstants.WMQ_CLIENT_RECONNECT);
 			connectionFactory.setClientReconnectTimeout(clientReconnectTimeout);
 			LOGGER.debug("Client reconnect enabled with {} second timeout", clientReconnectTimeout);
+
+			connectionFactory.setBalancingOptions(WMQConstants.WMQ_BALANCING_OPTIONS_IGNORE_TRANSACTIONS);
+		    connectionFactory.setBalancingTimeout(WMQConstants.WMQ_BALANCING_TIMEOUT_IMMEDIATE);
+			LOGGER.debug("Client balancing enabled with option 'ignore transactions' + {} second timeout", WMQConstants.WMQ_BALANCING_TIMEOUT_IMMEDIATE);
 
 			if (usingCcdt) {
 				LOGGER.info(

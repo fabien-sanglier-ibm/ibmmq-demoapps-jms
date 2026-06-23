@@ -17,6 +17,8 @@ public class Producer {
 
 	private static final Logger LOGGER = LoggerFactory.getLogger(Producer.class);
 
+	private static String CONST_ANY_QM = "*ANY_QM";
+
 	public static void main(String[] args) {
 		Connection connection = null;
 		Session session = null;
@@ -53,7 +55,7 @@ public class Producer {
 			int logFrequency = parseIntWithValidation("MQ_LOG_FREQUENCY", getEnvOrDefault("MQ_LOG_FREQUENCY", "10"), 1,
 					Integer.MAX_VALUE);
 			int clientReconnectTimeout = parseIntWithValidation("MQ_CLIENT_RECONNECT_TIMEOUT",
-					getEnvOrDefault("MQ_CLIENT_RECONNECT_TIMEOUT", "300"), 0, Integer.MAX_VALUE);
+					getEnvOrDefault("MQ_CLIENT_RECONNECT_TIMEOUT", "120"), 0, Integer.MAX_VALUE);
 			String mqAppPassword = System.getenv("MQ_APP_PASSWORD");
 
 			LOGGER.debug("Resolved MQ environment configuration for producer startup");
@@ -86,6 +88,9 @@ public class Producer {
 			if (usingCcdt) {
 				LOGGER.info("Using CCDT configuration from: {}", mqCcdtUrl);
 				connectionFactory.setCCDTURL(new java.net.URL(mqCcdtUrl));
+
+				// with CCDT, forcing queue manager to *ANY_QM
+				mqQueueManager = Producer.CONST_ANY_QM;
 				connectionFactory.setQueueManager(mqQueueManager);
 				LOGGER.debug("CCDT URL configured with queue manager: {} - all connection details will be read from CCDT file", mqQueueManager);
 			} else {
@@ -173,6 +178,10 @@ public class Producer {
 			connectionFactory.setClientReconnectOptions(WMQConstants.WMQ_CLIENT_RECONNECT);
 			connectionFactory.setClientReconnectTimeout(clientReconnectTimeout);
 			LOGGER.debug("Client reconnect enabled with {} second timeout", clientReconnectTimeout);
+
+			connectionFactory.setBalancingOptions(WMQConstants.WMQ_BALANCING_OPTIONS_IGNORE_TRANSACTIONS);
+		    connectionFactory.setBalancingTimeout(WMQConstants.WMQ_BALANCING_TIMEOUT_IMMEDIATE);
+			LOGGER.debug("Client balancing enabled with option 'ignore transactions' + {} second timeout", WMQConstants.WMQ_BALANCING_TIMEOUT_IMMEDIATE);
 
 			if (usingCcdt) {
 				LOGGER.info(
