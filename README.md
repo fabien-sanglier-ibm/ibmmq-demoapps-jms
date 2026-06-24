@@ -10,6 +10,23 @@ This project contains two Java applications that demonstrate messaging with IBM 
 - **Producer**: Sends messages to an IBM MQ queue
 - **Consumer**: Receives messages from an IBM MQ queue
 
+## Version Strategy
+
+This project follows a versioning strategy aligned with IBM MQ major versions:
+
+| Branch/Version | IBM MQ Version | Status |
+|----------------|----------------|--------|
+| **1.x** | MQ v9.x (9.4.1.0) | Previous stable |
+| **2.x** | MQ v10.x (10.0.0.0) | Current (main branch) |
+| **3.x** | MQ v11.x | Future |
+
+**Branch Usage:**
+- Use the **1.x branch** for applications connecting to IBM MQ v9.x queue managers
+- Use the **2.x branch** (main) for applications connecting to IBM MQ v10.x queue managers
+- Future major MQ versions will follow the same pattern (3.x for MQ v11, etc.)
+
+**Compatibility Note:** While IBM MQ clients are generally backward compatible, using the matching client version for your queue manager version ensures optimal compatibility and access to the latest features.
+
 ## Recent Updates
 
 ### 2026-06-24
