@@ -10,9 +10,12 @@ This project contains two Java applications that demonstrate messaging with IBM 
 - **Producer**: Sends messages to an IBM MQ queue
 - **Consumer**: Receives messages from an IBM MQ queue
 
-## Recent Updates (2026-06-18)
+## Recent Updates
 
-### Security & Dependency Updates
+### 2026-06-24
+- **IBM MQ Client**: Updated from 9.4.1.0 to **10.0.0.0** (MQ v10 support)
+
+### 2026-06-18
 - **Java Version**: Upgraded from Java 1.7 to **Java 17 (LTS)** for active security support
 - **IBM MQ Client**: Updated from 9.3.5.0 to **9.4.1.0** (latest stable)
 - **JUnit**: Updated from 4.13.1 to **4.13.2** (security fixes)
