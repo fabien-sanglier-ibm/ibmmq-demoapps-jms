@@ -223,30 +223,172 @@ This starts:
 
 See the [Docker Compose Guide](docs/DOCKER-COMPOSE-GUIDE.md) for detailed configuration options, troubleshooting, and advanced scenarios.
 
-### Individual Docker Containers
+### Building and Running Individual Docker Containers
 
-Build and run containers individually:
+#### Build Images Locally
 
 ```bash
 # Build Producer image
 cd jmsproducer
 docker build -t jmsproducer:latest .
+cd ..
 
 # Build Consumer image
 cd jmsconsumer
 docker build -t jmsconsumer:latest .
+cd ..
+```
 
+#### Run Containers from Local Images
+
+**Basic Usage (connecting to remote MQ):**
+
+```bash
 # Run Producer
 docker run --rm \
   -e MQ_HOST=your-mq-host \
+  -e MQ_PORT=1414 \
+  -e MQ_QUEUE_MANAGER=QM1 \
+  -e MQ_CHANNEL=DEV.APP.SVRCONN \
+  -e MQ_QUEUE_NAME=DEV.QUEUE.1 \
+  -e MQ_APP_USERNAME=app \
   -e MQ_APP_PASSWORD=your-password \
   jmsproducer:latest
 
 # Run Consumer
 docker run --rm \
   -e MQ_HOST=your-mq-host \
+  -e MQ_PORT=1414 \
+  -e MQ_QUEUE_MANAGER=QM1 \
+  -e MQ_CHANNEL=DEV.APP.SVRCONN \
+  -e MQ_QUEUE_NAME=DEV.QUEUE.1 \
+  -e MQ_APP_USERNAME=app \
   -e MQ_APP_PASSWORD=your-password \
   jmsconsumer:latest
+```
+
+**With Custom Configuration:**
+
+```bash
+# Run Producer with custom message and send rate
+docker run --rm \
+  -e MQ_HOST=localhost \
+  -e MQ_PORT=1414 \
+  -e MQ_QUEUE_MANAGER=QM1 \
+  -e MQ_CHANNEL=DEV.APP.SVRCONN \
+  -e MQ_QUEUE_NAME=DEV.QUEUE.1 \
+  -e MQ_APP_USERNAME=app \
+  -e MQ_APP_PASSWORD=your-password \
+  -e MQ_MESSAGE="Custom test message" \
+  -e MQ_SEND_SLEEP_MILLIS=2000 \
+  -e MQ_LOG_FREQUENCY=5 \
+  jmsproducer:latest
+
+# Run Consumer with message counting enabled
+docker run --rm \
+  -e MQ_HOST=localhost \
+  -e MQ_PORT=1414 \
+  -e MQ_QUEUE_MANAGER=QM1 \
+  -e MQ_CHANNEL=DEV.APP.SVRCONN \
+  -e MQ_QUEUE_NAME=DEV.QUEUE.1 \
+  -e MQ_APP_USERNAME=app \
+  -e MQ_APP_PASSWORD=your-password \
+  -e MQ_ENABLE_MESSAGE_COUNT=true \
+  -e MQ_RECEIVE_TIMEOUT_MILLIS=2000 \
+  jmsconsumer:latest
+```
+
+**With TLS/SSL:**
+
+```bash
+# Run Producer with TLS (using CA certificate)
+docker run --rm \
+  -e MQ_HOST=your-mq-host \
+  -e MQ_PORT=1414 \
+  -e MQ_QUEUE_MANAGER=QM1 \
+  -e MQ_CHANNEL=DEV.APP.SVRCONN \
+  -e MQ_QUEUE_NAME=DEV.QUEUE.1 \
+  -e MQ_APP_USERNAME=app \
+  -e MQ_APP_PASSWORD=your-password \
+  -e MQ_SSL_CIPHER_SUITE=TLS_RSA_WITH_AES_128_CBC_SHA256 \
+  -e MQ_SSL_CA_CERT_PATH=/certs/ca.crt \
+  -v /path/to/local/certs:/certs:ro \
+  jmsproducer:latest
+
+# Run Consumer with mTLS (client certificate authentication)
+docker run --rm \
+  -e MQ_HOST=your-mq-host \
+  -e MQ_PORT=1414 \
+  -e MQ_QUEUE_MANAGER=QM1 \
+  -e MQ_CHANNEL=DEV.APP.SVRCONN \
+  -e MQ_QUEUE_NAME=DEV.QUEUE.1 \
+  -e MQ_APP_USERNAME=app \
+  -e MQ_SSL_CIPHER_SUITE=TLS_RSA_WITH_AES_128_CBC_SHA256 \
+  -e MQ_SSL_CA_CERT_PATH=/certs/ca.crt \
+  -e MQ_SSL_KEYSTORE_PATH=/certs/client-keystore.jks \
+  -e MQ_SSL_KEYSTORE_PASSWORD=keystore-password \
+  -v /path/to/local/certs:/certs:ro \
+  jmsconsumer:latest
+```
+
+**Connecting to Local MQ (Docker Host Network):**
+
+```bash
+# Run Producer connecting to MQ on host machine
+docker run --rm \
+  --network host \
+  -e MQ_HOST=localhost \
+  -e MQ_PORT=1414 \
+  -e MQ_QUEUE_MANAGER=QM1 \
+  -e MQ_CHANNEL=DEV.APP.SVRCONN \
+  -e MQ_QUEUE_NAME=DEV.QUEUE.1 \
+  -e MQ_APP_USERNAME=app \
+  -e MQ_APP_PASSWORD=your-password \
+  jmsproducer:latest
+
+# Run Consumer connecting to MQ on host machine
+docker run --rm \
+  --network host \
+  -e MQ_HOST=localhost \
+  -e MQ_PORT=1414 \
+  -e MQ_QUEUE_MANAGER=QM1 \
+  -e MQ_CHANNEL=DEV.APP.SVRCONN \
+  -e MQ_QUEUE_NAME=DEV.QUEUE.1 \
+  -e MQ_APP_USERNAME=app \
+  -e MQ_APP_PASSWORD=your-password \
+  jmsconsumer:latest
+```
+
+**Interactive Mode (with shell access):**
+
+```bash
+# Run Producer with shell access for debugging
+docker run -it \
+  -e MQ_HOST=your-mq-host \
+  -e MQ_APP_PASSWORD=your-password \
+  --entrypoint /bin/bash \
+  jmsproducer:latest
+
+# Inside container, you can run:
+# java -jar /app/app.jar
+```
+
+**Background Mode (detached):**
+
+```bash
+# Run Producer in background
+docker run -d \
+  --name my-producer \
+  -e MQ_HOST=your-mq-host \
+  -e MQ_APP_PASSWORD=your-password \
+  jmsproducer:latest
+
+# View logs
+docker logs -f my-producer
+
+# Stop container
+docker stop my-producer
+docker rm my-producer
 ```
 
 ## GitHub Container Registry (GHCR)
